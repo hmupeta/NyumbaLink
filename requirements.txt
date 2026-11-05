@@ -5,3 +5,5 @@ django-cors-headers>=4.3
 drf-spectacular>=0.27
 psycopg[binary]>=3.1
 python-dotenv>=1.0
+drf-nested-routers>=0.94
+djangorestframework-simplejwt>=5.4

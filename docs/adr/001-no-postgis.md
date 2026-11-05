@@ -1,40 +1,79 @@
-# ADR-001: Defer PostGIS to Phase 2
+# ADR-001: No PostGIS (indefinite deferral with explicit triggers)
 
 ## Status
-Accepted, temporary. Revisit at the start of Phase 2.
+Accepted. Indefinite until a documented trigger fires.
 
 ## Context
-The GDAL native library could not be loaded on the Windows development
-machine (Store Python 3.13, osgeo wheel contains bindings but no DLL).
-Phase 1 deliverables — custom user model, location hierarchy, REST
-baseline, CI, health check — do not require geospatial queries.
+Phase 1 attempted Django's `django.contrib.gis` stack on native Windows.
+GDAL native library loading proved unreliable under Store Python 3.13
+(empty osgeo DLL folder, wheel/bindings-only packages, antivirus blocks,
+version-name drift between Django's search list and installed GDAL).
+
+Two reversals were considered and rejected:
+  - OSGeo4W on Windows — workable but fragile and platform-specific.
+  - WSL2 — durable but a mid-Phase-1 workflow change.
+
+Neither Phase 1 (accounts, locations) nor Phase 2 (properties, listings,
+moderation, permissions) requires any spatial query. `DecimalField(9, 6)`
+stores coordinates losslessly at ~11 cm precision, far beyond what any
+property listing needs.
 
 ## Decision
-Run plain PostgreSQL for Phase 1. Coordinates are stored as
-`DecimalField(max_digits=9, decimal_places=6)` for latitude and
-longitude rather than a `PointField`.
+Run plain PostgreSQL. Store coordinates as `latitude` / `longitude`
+`DecimalField(max_digits=9, decimal_places=6)` with a DB-level CHECK
+constraint enforcing that both are set or neither is.
+
+`django.contrib.gis` remains commented out in `INSTALLED_APPS`.
+The DB engine is `django.db.backends.postgresql`.
+CI, docker-compose, and every settings file reflect non-GIS Postgres.
 
 ## Consequences
-- No proximity, distance, or polygon search until Phase 2.
-- `django.contrib.gis` is commented out in INSTALLED_APPS.
-- The database engine is `django.db.backends.postgresql`.
-- Every downstream model that wants geometry must wait.
+- No `ST_DWithin` / proximity search in the API.
+- No polygon or draw-on-map search.
+- No spatial index; distance filtering requires application-level
+  haversine over the result set. Viable to roughly 10k listings per
+  query; degrades beyond that.
+- Neighbourhood hierarchy (`Province > District > Locality > Neighbourhood`)
+  remains intact and drives location search today.
+- Frontend map rendering is unaffected: WGS84 lat/lng in the API is
+  what every map library expects.
 
-## Reversal procedure (Phase 2)
-1. Install OSGeo4W (Windows) or `apt install gdal-bin libgdal-dev` (Linux).
-2. Uncomment `django.contrib.gis` in INSTALLED_APPS.
-3. Switch engine back to `django.contrib.gis.db.backends.postgis`.
-4. Add a migration that:
-   a. Adds `centroid = PointField(srid=4326, null=True)`.
-   b. Runs `Neighbourhood.objects.update(
-          centroid=Func(
-              F("longitude"), F("latitude"),
-              function="ST_SetSRID",
-              template="ST_SetSRID(ST_MakePoint(%(expressions)s), 4326)",
-          )
-      )` — or the equivalent `RunPython` step.
-   c. Drops `latitude` and `longitude` once verified.
-5. Swap `NeighbourhoodAdmin` back to `GISModelAdmin`.
+## When to reverse
+Reversal is warranted only when one of these is observed, not on a
+schedule:
 
-Data loss: none. Lat/lng → geometry is a lossless conversion at
-6-decimal precision.
+  1. Proximity search ("within X km") is a top-3 requested feature.
+  2. p95 latency on the listings endpoint exceeds 200 ms under real
+     production load.
+  3. Neighbourhood polygon boundaries are required for draw-on-map
+     search or geofenced notifications.
+  4. A regulatory or partner requirement mandates polygon storage.
+
+Absent those, this ADR stands. Adding PostGIS prematurely forces a
+platform migration (WSL2/Linux, GDAL, engine swap, data migration)
+for zero user-visible benefit.
+
+## Reversal procedure
+Outline (details to be written at reversal time):
+
+  1. Move dev environment to WSL2 or Linux.
+  2. `apt install gdal-bin libgdal-dev libgeos-dev postgresql-16-postgis-3`.
+  3. Uncomment `django.contrib.gis`; switch DB engine to
+     `django.contrib.gis.db.backends.postgis`.
+  4. Enable PostGIS extension on the database.
+  5. Data migration per app:
+       a. Add `PointField(srid=4326, null=True)` alongside lat/lng.
+       b. `RunPython` step backfilling from lat/lng via
+          `ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)`.
+       c. Verify; drop the old decimal columns.
+  6. Add a spatial index and enable proximity filters.
+  7. Update CI and docker-compose to `postgis/postgis`.
+
+Data is preserved by construction. Estimated effort: ~20 minutes on
+Linux once the environment is in place.
+
+## History
+- 2026-11-04: drafted as "defer to Phase 2".
+- 2026-11-05: renamed to `001-no-postgis.md`; rewritten to reflect an
+  indefinite deferral with explicit reversal triggers. Phase 2 shipped
+  without PostGIS.
