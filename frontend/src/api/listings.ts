@@ -64,30 +64,21 @@ export const listingsApi = {
 export const getMediaUrl = (url: string) => {
   if (!url) return ''
   
-  // 1. If it's a mangled Unsplash URL like https:/images... fix the slashes
-  if (url.includes('https:/') && !url.includes('https://')) {
-    return url.replace('https:/', 'https://')
-  }
-
-  // 2. If the URL got prefixed with /media/ but is an external link
-  if (url.includes('/media/http')) {
-    const match = url.match(/https?:\/\/.*/)
-    if (match) return match[0]
+  // 1. Handle dummy seed data (e.g. https%3A/images.unsplash.com/... or /media/https%3A/...)
+  if (url.includes('https%3A') || url.includes('http%3A') || url.includes('/media/http')) {
+    const match = url.match(/https?(?:%3A|\:)/)
+    if (match && match.index !== undefined) {
+      const externalUrl = url.substring(match.index);
+      return decodeURIComponent(externalUrl);
+    }
   }
   
-  // 3. Clean up encoded URLs
-  if (url.includes('https%3A') || url.includes('http%3A')) {
-    const externalUrl = url.substring(url.indexOf('http'))
-    return decodeURIComponent(externalUrl)
-  }
-  
-  // 4. Standard external URLs (Unsplash, etc.)
+  // 2. Standard external URLs (like proper Unsplash links)
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url
   }
   
-  // 5. Standard local media paths
-  // Dynamically use the current API URL (e.g., https://nyumbalink-backend.../api/v1 -> https://nyumbalink-backend...)
+  // 3. Standard local media paths (Render backend)
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
   const baseUrl = apiUrl.replace('/api/v1', '')
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
