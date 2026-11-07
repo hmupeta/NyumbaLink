@@ -56,11 +56,16 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 # ----------------------------------------------------------------
 # CORS (Allow the frontend to talk to the backend)
 # ----------------------------------------------------------------
-CORS_ALLOW_ALL_ORIGINS = True  # Restrict to your domain later
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://nyumbalink-frontend-pbkm.onrender.com",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 CSRF_TRUSTED_ORIGINS = [
-    "https://nyumbalink.onrender.com",
-    "https://nyumbalink-backend.onrender.com",
+    "https://nyumbalink-frontend-pbkm.onrender.com",
+    "https://nyumbalink-backend-eaw2.onrender.com",
     "https://nyumbalink.com",
     "https://www.nyumbalink.com",
 ]

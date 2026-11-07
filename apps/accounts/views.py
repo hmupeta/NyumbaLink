@@ -15,7 +15,7 @@ def _cookie_kwargs(max_age: int) -> dict:
         "max_age": max_age,
         "httponly": True,
         "secure": not settings.DEBUG,
-        "samesite": "Lax",
+        "samesite": "None" if not settings.DEBUG else "Lax",
     }
 
 
