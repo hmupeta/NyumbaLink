@@ -178,8 +178,12 @@ class ListingViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def my_listings(self, request):
         if not request.user.is_authenticated:
-            return Response([])
+            return Response({"detail": "Authentication required."}, status=401)
             
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Fetching listings for user: {request.user.email} (ID: {request.user.id})")
+
         qs = Listing.objects.filter(
             Q(created_by=request.user) | Q(property__submitted_by=request.user)
         ).select_related(
@@ -187,6 +191,8 @@ class ListingViewSet(viewsets.ModelViewSet):
             "created_by",
         ).prefetch_related("media").order_by("-created_at")
         
+        logger.info(f"Found {qs.count()} listings for {request.user.email}")
+
         page = self.paginate_queryset(qs)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
