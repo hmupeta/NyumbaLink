@@ -16,7 +16,6 @@ import AffordabilityCalculator from '../components/AffordabilityCalculator'
 import IntentCards from '../components/IntentCards'
 
 export default function HomePage() {
-  const { user } = useAuth();
   const [searchParams] = useSearchParams()
   const initialType = searchParams.get('type') === 'sale' ? 'SALE' : searchParams.get('type') === 'rent' ? 'RENT' : undefined
   
@@ -48,23 +47,6 @@ export default function HomePage() {
   useEffect(() => {
     if (affordableBudget) setFilters(prev => ({ ...prev, max_price: affordableBudget }))
   }, [affordableBudget])
-
-  const saveSearchMutation = useMutation({
-    mutationFn: () => {
-      const name = filters.search ? `Search: ${filters.search}` : 'Custom Property Search';
-      return searchApi.create({
-        name,
-        query: filters.search || '',
-        transaction_type: filters.transaction_type || '',
-        property_type: filters.property_type || '',
-        district: filters.district || '',
-        max_price: filters.max_price || null,
-        min_bedrooms: filters.min_bedrooms || null,
-      })
-    },
-    onSuccess: () => alert('Search saved! We will email you when new properties match.'),
-    onError: () => alert('Failed to save search. Please log in.')
-  })
 
   const updateFilter = (key: keyof ListingFilters, value: any) => {
     setFilters(prev => {

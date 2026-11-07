@@ -20,6 +20,8 @@ export interface PropertySummary {
   bedrooms: number | null
   bathrooms: string | null
   neighbourhood: string
+  latitude: number | null
+  longitude: number | null
 }
 
 export interface Listing {

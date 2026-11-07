@@ -15,8 +15,8 @@ export default function MaintenanceList() {
   })
 
   // Assuming we have properties and leases for the dropdowns
-  const { data: properties } = useQuery({ queryKey: ['properties-list'], queryFn: () => api('/properties/') })
-  const { data: leases } = useQuery({ queryKey: ['leases-list'], queryFn: () => api('/leases/') })
+  const { data: properties } = useQuery<any>({ queryKey: ['properties-list'], queryFn: () => api('/properties/') })
+  const { data: leases } = useQuery<any>({ queryKey: ['leases-list'], queryFn: () => api('/leases/') })
 
   const createMutation = useMutation({
     mutationFn: () => maintenanceApi.create({ 

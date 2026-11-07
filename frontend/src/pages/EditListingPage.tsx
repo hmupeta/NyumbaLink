@@ -1,7 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../api/client'
 import { listingsApi, getMediaUrl } from '../api/listings'
 import ErrorMessage from '../components/ErrorMessage'
 import Loading from '../components/Loading'
