@@ -24,9 +24,11 @@ export default function DashboardPage() {
     }
   })
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['my-listings'],
     queryFn: () => listingsApi.getMyListings(),
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   const myListings = data?.results || []
@@ -39,6 +41,12 @@ export default function DashboardPage() {
           <p className="text-gray-600">Manage your properties and listing requests.</p>
         </div>
         <div className="flex gap-3">
+          <button 
+            onClick={() => refetch()} 
+            className="bg-gray-100 border border-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 font-medium text-sm transition"
+          >
+            Refresh Data
+          </button>
           <Link
             to={`/profiles/${user?.id}`}
             className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-50 font-medium text-sm transition"
@@ -103,6 +111,7 @@ export default function DashboardPage() {
           {data && myListings.length === 0 && (
             <div className="text-center py-12 bg-white rounded border shadow-sm">
               <p className="text-gray-500 mb-4">You haven't created any listings yet.</p>
+              <p className="text-xs text-gray-400 mb-4">(Backend returned count: {data?.count || 0})</p>
               <Link to="/dashboard/listings/new" className="text-emerald-600 hover:underline">
                 Create your first listing
               </Link>
