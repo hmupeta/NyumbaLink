@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { useAuth } from '../auth/AuthContext'
-import { searchApi } from '../api/search'
+import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { listingsApi, type ListingFilters, getMediaUrl } from '../api/listings'
 import { locationsApi } from '../api/locations'
