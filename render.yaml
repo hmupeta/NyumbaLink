@@ -6,7 +6,7 @@ databases:
 
 services:
   # ------------------------------------------------------------
-  # DJANGO BACKEND
+  # DJANGO BACKEND (Web Service)
   # ------------------------------------------------------------
   - type: web
     name: nyumbalink-backend
@@ -24,17 +24,17 @@ services:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.prod
       - key: PYTHON_VERSION
-        value: 3.12.0
+        value: "3.12.0"
       - key: WEB_CONCURRENCY
-        value: 2
+        value: "2"
 
   # ------------------------------------------------------------
-  # REACT FRONTEND
+  # REACT FRONTEND (Static Site)
   # ------------------------------------------------------------
   - type: web
     name: nyumbalink-frontend
     runtime: static
-    plan: free
+    # plan: free  <-- REMOVED: Static sites do not use compute plans
     rootDir: frontend
     buildCommand: "npm install && npm run build"
     staticPublishPath: dist
