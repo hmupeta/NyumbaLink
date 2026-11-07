@@ -22,6 +22,8 @@ DEBUG = env("DEBUG", "False", bool)
 ALLOWED_HOSTS = [h.strip() for h in env("ALLOWED_HOSTS", "").split(",") if h.strip()]
 
 INSTALLED_APPS = [
+    "cloudinary_storage",
+    "cloudinary",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

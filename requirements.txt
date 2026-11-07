@@ -21,3 +21,6 @@ psycopg2-binary>=2.9
 
 django-anymail[resend]>=10.0
 sentry-sdk[django]>=1.40
+
+cloudinary>=1.36
+django-cloudinary-storage>=0.3.0
