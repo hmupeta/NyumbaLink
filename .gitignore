@@ -2,10 +2,11 @@
 __pycache__/
 *.py[cod]
 venv/
-.env
+.venv/
+*.sqlite3
 
 # Django
-db.sqlite3
+.env
 media/
 staticfiles/
 
@@ -13,6 +14,11 @@ staticfiles/
 node_modules/
 frontend/node_modules/
 frontend/dist/
+frontend/.env.local
 
 # Tools
 tools/
+
+# OS
+.DS_Store
+Thumbs.db
