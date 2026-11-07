@@ -81,11 +81,14 @@ export const getMediaUrl = (url: string) => {
     return decodeURIComponent(externalUrl)
   }
   
-  // 4. Standard external URLs
+  // 4. Standard external URLs (Unsplash, etc.)
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url
   }
   
-  // 5. Standard local media
-  return `http://localhost:8000${url.startsWith('/') ? '' : '/'}${url}`
+  // 5. Standard local media paths
+  // Dynamically use the current API URL (e.g., https://nyumbalink-backend.../api/v1 -> https://nyumbalink-backend...)
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+  const baseUrl = apiUrl.replace('/api/v1', '')
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
 }
