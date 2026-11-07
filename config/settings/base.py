@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # "django.contrib.gis",  # DEFERRED until Phase 2 — see docs/adr/001-defer-postgis.md
     "rest_framework",
+    "anymail",
     "django_filters",
     "corsheaders",
     "drf_spectacular",

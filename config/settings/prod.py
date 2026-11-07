@@ -76,3 +76,27 @@ DEFAULT_FROM_EMAIL = "alerts@nyumbalink.com"
 # ----------------------------------------------------------------
 SIMPLE_JWT["AUTH_COOKIE_SECURE"] = True
 SIMPLE_JWT["AUTH_COOKIE_SAMESITE"] = "None"
+
+# ----------------------------------------------------------------
+# ERROR TRACKING (Sentry)
+# ----------------------------------------------------------------
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
+sentry_dsn = os.environ.get("SENTRY_DSN", "")
+if sentry_dsn:
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=0.1, # 10% of transactions for performance monitoring
+        send_default_pii=True
+    )
+
+# ----------------------------------------------------------------
+# EMAIL (Resend via Anymail)
+# ----------------------------------------------------------------
+EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+ANYMAIL = {
+    "RESEND_API_KEY": os.environ.get("RESEND_API_KEY", ""),
+}
+DEFAULT_FROM_EMAIL = "NyumbaLink <onboarding@resend.dev>" # Change to alerts@yourdomain.com later
