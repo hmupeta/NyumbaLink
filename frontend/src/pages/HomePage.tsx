@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { listingsApi, type ListingFilters, getMediaUrl } from '../api/listings'
@@ -58,6 +59,11 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Helmet>
+        <title>NyumbaLink | Find your place in Zambia</title>
+        <meta name="description" content="The most trusted property marketplace in Zambia. Find houses, apartments, and land for rent or sale in Lusaka and beyond." />
+        <meta name="keywords" content="Zambia property, houses for rent Lusaka, buy house Zambia, NyumbaLink" />
+      </Helmet>
       
       {/* HERO SECTION */}
       <div className={`transition-all duration-500 ${viewMode === 'map' ? 'h-40' : 'h-[450px]'}`}>

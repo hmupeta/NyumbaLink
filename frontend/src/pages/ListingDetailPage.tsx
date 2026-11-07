@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listingsApi, getMediaUrl } from '../api/listings'
@@ -76,6 +77,20 @@ export default function ListingDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      <Helmet>
+        <title>{listing.title} | NyumbaLink</title>
+        <meta name="description" content={`${listing.property_summary.property_type} in ${listing.property_summary.neighbourhood}. ${listing.description?.slice(0, 150)}`} />
+        
+        {/* Open Graph tags for WhatsApp/Facebook */}
+        <meta property="og:title" content={`${listing.title} | NyumbaLink`} />
+        <meta property="og:description" content={`${listing.currency} ${Number(listing.price).toLocaleString()} · ${listing.property_summary.neighbourhood}`} />
+        <meta property="og:type" content="website" />
+        {images.length > 0 && <meta property="og:image" content={getMediaUrl(images[0].file)} />}
+        <meta property="og:url" content={window.location.href} />
+        
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+      </Helmet>
       <Link to="/" className="text-sm text-emerald-700 hover:underline">← Back to listings</Link>
       <h1 className="text-3xl font-bold mt-4 mb-2">{listing.title}</h1>
       <p className="text-gray-600 mb-6">{listing.property_summary.neighbourhood} · {listing.property_summary.property_type}</p>
