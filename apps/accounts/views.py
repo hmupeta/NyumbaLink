@@ -113,3 +113,15 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+    def patch(self, request):
+        user = request.user
+        for field in ["first_name", "last_name", "bio"]:
+            if field in request.data:
+                setattr(user, field, request.data[field])
+        if "avatar" in request.FILES:
+            user.avatar = request.FILES["avatar"]
+        if "cover_photo" in request.FILES:
+            user.cover_photo = request.FILES["cover_photo"]
+        user.save()
+        return Response(UserSerializer(user).data)

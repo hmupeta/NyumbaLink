@@ -5,7 +5,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .enums import ListingStatus
-from .models import Listing, ListingMedia, Property, Report
+from django.db.models import Sum, Count
+from .models import HeroImage, Listing, ListingMedia, Property, Report, SavedListing
+from apps.payments.models import ContactUnlock
+from apps.messaging.models import Conversation
 from .permissions import user_can_edit_listing, user_can_manage_property, user_is_moderator
 from .serializers import (
     ListingActionSerializer,
@@ -13,6 +16,7 @@ from .serializers import (
     ListingSerializer,
     PropertySerializer,
     ReportSerializer,
+    HeroImageSerializer,
 )
 from . import services
 
@@ -50,6 +54,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
 
 class ListingFilter(filters.FilterSet):
+    status = filters.CharFilter(field_name="status")
     province = filters.CharFilter(field_name="property__neighbourhood__locality__district__province__slug")
     district = filters.CharFilter(field_name="property__neighbourhood__locality__district__slug")
     locality = filters.CharFilter(field_name="property__neighbourhood__locality__slug")
@@ -83,14 +88,29 @@ class ListingViewSet(viewsets.ModelViewSet):
             "created_by",
         ).prefetch_related("media")
         user = self.request.user
+        
+        # Staff see everything (for moderation)
         if user.is_authenticated and user.is_staff:
             return qs
+            
+        # The my_listings action handles its own filtering
+        if self.action == "my_listings":
+            return qs
+
+        # PUBLIC LIST VIEW (Homepage): ALWAYS only return PUBLISHED
+        if self.action == "list":
+            return qs.filter(status=ListingStatus.PUBLISHED)
+
+        # DETAIL ACTIONS (Update, Delete, Submit, Publish):
+        # Allow if it's published OR if the user owns it
         if user.is_authenticated:
             return qs.filter(
                 Q(status=ListingStatus.PUBLISHED)
                 | Q(created_by=user)
                 | Q(property__submitted_by=user)
             )
+
+        # Anonymous users can only see published listings
         return qs.filter(status=ListingStatus.PUBLISHED)
 
     def perform_create(self, serializer):
@@ -109,6 +129,84 @@ class ListingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
         return self._transition_action(request, services.submit_listing)
+
+    @action(detail=True, methods=["post"])
+    def track_view(self, request, pk=None):
+        listing = self.get_object()
+        # Basic logic: don't track if the owner views it
+        if request.user.is_authenticated and listing.created_by == request.user:
+            return Response({"status": "ignored"})
+        
+        listing.views_count += 1
+        listing.save(update_fields=["views_count"])
+        return Response({"status": "tracked"})
+
+    @action(detail=False, methods=["get"])
+    def analytics(self, request):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication required."}, status=403)
+        
+        # Aggregate data for this landlord
+        listings = Listing.objects.filter(created_by=request.user)
+        
+        total_views = listings.aggregate(total=Sum("views_count"))["total"] or 0
+        total_saves = SavedListing.objects.filter(listing__in=listings).count()
+        total_unlocks = ContactUnlock.objects.filter(listing__in=listings).count()
+        total_conversations = Conversation.objects.filter(listing__in=listings).count()
+        
+        # Get per-listing stats for the chart
+        chart_data = []
+        for l in listings:
+            chart_data.append({
+                "id": str(l.id),
+                "title": l.title,
+                "views": l.views_count,
+                "saves": l.saved_by.count(),
+                "unlocks": l.unlocks.count() if hasattr(l, 'unlocks') else 0,
+            })
+
+        return Response({
+            "totals": {
+                "views": total_views,
+                "saves": total_saves,
+                "unlocks": total_unlocks,
+                "conversations": total_conversations
+            },
+            "chart_data": chart_data
+        })
+
+    @action(detail=False, methods=["get"])
+    def my_listings(self, request):
+        if not request.user.is_authenticated:
+            return Response([])
+            
+        qs = Listing.objects.filter(
+            Q(created_by=request.user) | Q(property__submitted_by=request.user)
+        ).select_related(
+            "property__neighbourhood__locality__district__province",
+            "created_by",
+        ).prefetch_related("media").order_by("-created_at")
+        
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+            
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"])
+    def recommendations(self, request):
+        if not request.user.is_authenticated:
+            return Response([])
+        
+        # Simple logic: return 3 random published listings not owned by the user
+        recs = Listing.objects.filter(status=ListingStatus.PUBLISHED).exclude(
+            created_by=request.user
+        ).order_by("?")[:3]
+        
+        serializer = self.get_serializer(recs, many=True)
+        return Response(serializer.data)
 
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
@@ -143,6 +241,12 @@ class ListingMediaViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You cannot add media to this listing")
         serializer.save(listing=listing)
 
+    def perform_destroy(self, instance):
+        if not user_can_edit_listing(self.request.user, instance.listing):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You cannot remove media from this listing")
+        instance.delete()
+
 
 class ReportViewSet(viewsets.ModelViewSet):
     serializer_class = ReportSerializer
@@ -163,3 +267,26 @@ class ReportViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Only moderators can update reports")
         return super().partial_update(request, *args, **kwargs)
+
+
+class SavedListingViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        return SavedListing.objects.filter(user=self.request.user).select_related("listing")
+    
+    def create(self, request):
+        listing_id = request.data.get("listing_id")
+        saved, created = SavedListing.objects.get_or_create(user=request.user, listing_id=listing_id)
+        return Response({"status": "saved"})
+        
+    def destroy(self, request, pk=None):
+        # pk here will be the listing_id based on our frontend URL structure
+        SavedListing.objects.filter(user=request.user, listing_id=pk).delete()
+        return Response(status=204)
+
+
+class HeroImageViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = HeroImage.objects.filter(is_active=True)
+    serializer_class = HeroImageSerializer
+    permission_classes = [permissions.AllowAny]

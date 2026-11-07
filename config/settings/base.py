@@ -38,6 +38,15 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.locations",
     "apps.properties",
+    "apps.verification",
+    "apps.payments",
+    "apps.integrations",
+    "apps.messaging",
+    "apps.reviews",
+    "apps.notifications",
+    "apps.search",
+    "apps.management",
+    "apps.maintenance",
 ]
 
 MIDDLEWARE = [
@@ -99,7 +108,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -163,3 +172,6 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "INFO"},
 }
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "alerts@nyumbalink.com"

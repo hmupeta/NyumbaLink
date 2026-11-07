@@ -166,6 +166,7 @@ class Listing(TimeStampedModel):
     expires_at = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(blank=True)
     moderation_note = models.TextField(blank=True)
+    views_count = models.PositiveIntegerField(default=0)
 
     class Meta(TimeStampedModel.Meta):
         verbose_name = "listing"
@@ -268,3 +269,32 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.action} {self.target_type}/{self.target_id}"
+
+class SavedListing(TimeStampedModel):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_listings")
+    listing = models.ForeignKey("Listing", on_delete=models.CASCADE, related_name="saved_by")
+
+    class Meta(TimeStampedModel.Meta):
+        verbose_name = "saved listing"
+        verbose_name_plural = "saved listings"
+        constraints = [
+            models.UniqueConstraint(fields=["user", "listing"], name="uniq_user_saved_listing"),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} saved {self.listing.title}"
+
+class HeroImage(TimeStampedModel):
+    title = models.CharField(max_length=128, blank=True, help_text="Optional text overlay")
+    subtitle = models.CharField(max_length=256, blank=True)
+    image = models.ImageField(upload_to="hero_images/")
+    is_active = models.BooleanField(default=True)
+    display_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta(TimeStampedModel.Meta):
+        ordering = ["display_order", "-created_at"]
+        verbose_name = "hero image"
+        verbose_name_plural = "hero images"
+
+    def __str__(self):
+        return self.title or f"Hero #{self.display_order}"

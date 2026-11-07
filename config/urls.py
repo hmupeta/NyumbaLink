@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -9,7 +11,20 @@ urlpatterns = [
     path("health/", health, name="health"),
     path("api/v1/", include("apps.locations.urls")),
     path("api/v1/", include("apps.properties.urls")),
+    path("api/v1/", include("apps.verification.urls")),
+    path("api/v1/", include("apps.payments.urls")),
+    path("api/v1/", include("apps.integrations.urls")),
+    path("api/v1/", include("apps.messaging.urls")),
+    path("api/v1/", include("apps.reviews.urls")),
+    path("api/v1/", include("apps.notifications.urls")),
+    path("api/v1/", include("apps.search.urls")),
+    path("api/v1/", include("apps.management.urls")),
+    path("api/v1/", include("apps.maintenance.urls")),
     path("api/v1/auth/", include("apps.accounts.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -17,6 +17,9 @@ class User(AbstractUser):
     )
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     phone_verified_at = models.DateTimeField(blank=True, null=True)
+    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
+    cover_photo = models.ImageField(upload_to="covers/", blank=True, null=True)
+    bio = models.TextField(blank=True, help_text="Tell tenants a bit about yourself.")
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

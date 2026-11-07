@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AuditLog, Listing, ListingMedia, Property, PropertyAuthority, PropertyFeature, Report
+from .models import AuditLog, HeroImage, Listing, ListingMedia, Property, PropertyAuthority, PropertyFeature, Report
 
 
 class ListingMediaInline(admin.TabularInline):
@@ -72,3 +72,9 @@ class AuditLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(HeroImage)
+class HeroImageAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "is_active", "display_order")
+    list_editable = ("is_active", "display_order")

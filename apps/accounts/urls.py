@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import LoginView, LogoutView, MeView, RefreshView, RegisterView
+from apps.core.views import AdminDashboardView
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="auth-register"),
@@ -8,4 +9,5 @@ urlpatterns = [
     path("refresh/", RefreshView.as_view(), name="auth-refresh"),
     path("logout/", LogoutView.as_view(), name="auth-logout"),
     path("me/", MeView.as_view(), name="auth-me"),
+    path("admin-stats/", AdminDashboardView.as_view(), name="admin-stats"),
 ]

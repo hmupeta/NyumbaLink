@@ -14,15 +14,37 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function api<T>(path: string, options: RequestInit = {}, isRetry = false): Promise<T> {
+  const isFormData = options.body instanceof FormData
+  
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string> || {}),
+  }
+  
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json'
+  }
+
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
+    headers,
   })
+
+  // Handle expired access tokens by refreshing them automatically
+  if (res.status === 401 && !isRetry && !path.includes('/auth/')) {
+    try {
+      const refreshRes = await fetch(`${API_URL}/auth/refresh/`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (refreshRes.ok) {
+        return api<T>(path, options, true)
+      }
+    } catch {
+      // Refresh failed, fall through to error
+    }
+  }
 
   if (res.status === 204) return undefined as T
 

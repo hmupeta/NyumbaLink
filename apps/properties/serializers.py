@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .enums import ListingStatus
-from .models import Listing, ListingMedia, Property, PropertyFeature
+from .models import HeroImage, Listing, ListingMedia, Property, PropertyFeature
 from .permissions import user_can_create_listing
 
 
@@ -62,6 +62,7 @@ class ListingSerializer(serializers.ModelSerializer):
     media = ListingMediaSerializer(many=True, read_only=True)
     property_summary = serializers.SerializerMethodField()
     created_by_email = serializers.CharField(source="created_by.email", read_only=True)
+    is_saved = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
@@ -70,12 +71,18 @@ class ListingSerializer(serializers.ModelSerializer):
             "transaction_type", "price", "currency", "price_period",
             "deposit_months", "title", "description", "available_from",
             "status", "published_at", "expires_at", "rejection_reason",
-            "moderation_note", "media", "created_at", "updated_at",
+            "moderation_note", "media", "is_saved", "views_count", "created_at", "updated_at",
         )
         read_only_fields = (
             "id", "created_by", "status", "published_at", "expires_at",
             "rejection_reason", "moderation_note", "created_at", "updated_at",
         )
+
+    def get_is_saved(self, obj):
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            return obj.saved_by.filter(user=request.user).exists()
+        return False
 
     def get_property_summary(self, obj):
         p = obj.property
@@ -124,3 +131,9 @@ class ReportSerializer(serializers.ModelSerializer):
                 "Provide exactly one of target_listing or target_user."
             )
         return attrs
+
+
+class HeroImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HeroImage
+        fields = ("id", "title", "subtitle", "image", "display_order")
