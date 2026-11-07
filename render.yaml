@@ -2,7 +2,7 @@ databases:
   - name: nyumbalink-db
     databaseName: nyumbalink
     user: nyumbalink
-    plan: free
+    plan: basic-256mb  # Upgraded to $6/mo plan
 
 services:
   # ------------------------------------------------------------
@@ -34,7 +34,6 @@ services:
   - type: web
     name: nyumbalink-frontend
     runtime: static
-    # plan: free  <-- REMOVED: Static sites do not use compute plans
     rootDir: frontend
     buildCommand: "npm install && npm run build"
     staticPublishPath: dist
