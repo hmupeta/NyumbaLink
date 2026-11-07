@@ -1,19 +1,23 @@
 """
 Production settings for NyumbaLink (Render deployment).
+Clean version with all integrations.
 """
 from .base import *  # noqa: F401,F403
 import os
 import dj_database_url
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+import cloudinary
 
 # ----------------------------------------------------------------
 # CORE
 # ----------------------------------------------------------------
 DEBUG = False
 
-# Allow Render's auto-generated hostnames and your custom domain
 ALLOWED_HOSTS = [
     "nyumbalink.onrender.com",
     "nyumbalink-backend.onrender.com",
+    "nyumbalink-backend-eaw2.onrender.com",
     ".onrender.com",
     "nyumbalink.com",
     "www.nyumbalink.com",
@@ -38,8 +42,15 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ----------------------------------------------------------------
-# MEDIA FILES
+# MEDIA FILES (Cloudinary)
 # ----------------------------------------------------------------
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME", ""),
+    api_key=os.environ.get("CLOUDINARY_API_KEY", ""),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET", ""),
+    secure=True
+)
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -71,45 +82,28 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # ----------------------------------------------------------------
-# EMAIL (Use console backend on free tier)
-# ----------------------------------------------------------------
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "alerts@nyumbalink.com"
-
-# ----------------------------------------------------------------
-# JWT (Cookies must be secure in production)
-# ----------------------------------------------------------------
-SIMPLE_JWT["AUTH_COOKIE_SECURE"] = True
-SIMPLE_JWT["AUTH_COOKIE_SAMESITE"] = "None"
-
-# ----------------------------------------------------------------
-# ERROR TRACKING (Sentry)
-# ----------------------------------------------------------------
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
-
-sentry_dsn = os.environ.get("SENTRY_DSN", "")
-if sentry_dsn:
-    sentry_sdk.init(
-        dsn=sentry_dsn,
-        integrations=[DjangoIntegration()],
-        traces_sample_rate=0.1, # 10% of transactions for performance monitoring
-        send_default_pii=True
-    )
-
-# ----------------------------------------------------------------
 # EMAIL (Resend via Anymail)
 # ----------------------------------------------------------------
 EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
 ANYMAIL = {
     "RESEND_API_KEY": os.environ.get("RESEND_API_KEY", ""),
 }
-DEFAULT_FROM_EMAIL = "NyumbaLink <onboarding@resend.dev>" # Change to alerts@yourdomain.com later
+DEFAULT_FROM_EMAIL = "NyumbaLink <onboarding@resend.dev>"
 
-import cloudinary
-     cloudinary.config(
-     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME'),
-     api_key = os.environ.get('CLOUDINARY_API_KEY'),
-     api_secret = os.environ.get('CLOUDINARY_API_SECRET')
-   )
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# ----------------------------------------------------------------
+# ERROR TRACKING (Sentry)
+# ----------------------------------------------------------------
+sentry_dsn = os.environ.get("SENTRY_DSN", "")
+if sentry_dsn:
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=0.1,
+        send_default_pii=True
+    )
+
+# ----------------------------------------------------------------
+# JWT (Cookies must be secure in production)
+# ----------------------------------------------------------------
+SIMPLE_JWT["AUTH_COOKIE_SECURE"] = True
+SIMPLE_JWT["AUTH_COOKIE_SAMESITE"] = "None"
