@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+"""NyumbaLink Phase 30: Flutter Manage Property Screen."""
+from __future__ import annotations
+from pathlib import Path
+
+ROOT = Path.cwd()
+MOBILE = ROOT / "mobile"
+LIB = MOBILE / "lib"
+
+# ---------------------------------------------------------------- 1. Update API Client
+API_FILE = LIB / "api_client.dart"
+text = API_FILE.read_text(encoding="utf-8")
+
+if "updateListing" not in text:
+    # Add update and delete methods right before the Saved Properties section
+    old_section = "  // --- Saved Properties ---"
+    new_methods = '''  static Future<void> updateListing(String id, Map<String, dynamic> data) async {
+    final res = await http.patch(
+      Uri.parse('$baseUrl/listings/$id/'),
+      headers: await getHeaders(),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode != 200) throw Exception('Failed to update listing');
+  }
+
+  static Future<void> deleteListing(String id) async {
+    final res = await http.delete(
+      Uri.parse('$baseUrl/listings/$id/'),
+      headers: await getHeaders(),
+    );
+    if (res.statusCode != 204) throw Exception('Failed to delete listing');
+  }
+
+  // --- Saved Properties ---'''
+    
+    text = text.replace(old_section, new_methods)
+    API_FILE.write_text(text, encoding="utf-8")
+    print("✅ Patched api_client.dart: Added updateListing and deleteListing")
+
+# ---------------------------------------------------------------- 2. Create Manage Screen
+MANAGE_SCREEN = '''
+import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'api_client.dart';
+
+class ManageListingScreen extends StatefulWidget {
+  final String listingId;
+  final Function onUpdate; // Callback to refresh the dashboard
+
+  ManageListingScreen({required this.listingId, required this.onUpdate});
+
+  @override
+  _ManageListingScreenState createState() => _ManageListingScreenState();
+}
+
+class _ManageListingScreenState extends State<ManageListingScreen> {
+  late Future<Map<String, dynamic>> _listingFuture;
+  final _titleCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  bool _isLoading = false;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _listingFuture = ApiClient.getListingDetail(widget.listingId).then((data) {
+      // Pre-fill the form fields once data is loaded
+      if (!_isInitialized) {
+        _titleCtrl.text = data['title'] ?? '';
+        _priceCtrl.text = data['price']?.toString() ?? '';
+        _descCtrl.text = data['description'] ?? '';
+        _isInitialized = true;
+      }
+      return data;
+    });
+  }
+
+  String _getFullImageUrl(String url) {
+    if (url.startsWith('http')) return url;
+    return 'https://nyumbalink-backend-eaw2.onrender.com$url';
+  }
+
+  void _saveChanges() async {
+    setState(() => _isLoading = true);
+    try {
+      await ApiClient.updateListing(widget.listingId, {
+        'title': _titleCtrl.text,
+        'price': double.parse(_priceCtrl.text),
+        'description': _descCtrl.text,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Listing updated successfully!")));
+      widget.onUpdate(); // Refresh the dashboard list
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to update listing")));
+    }
+    setState(() => _isLoading = false);
+  }
+
+  void _deleteListing() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Delete Listing?"),
+        content: Text("This action cannot be undone. Are you sure you want to permanently delete this property?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            child: Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await ApiClient.deleteListing(widget.listingId);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Listing deleted")));
+      widget.onUpdate();
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to delete listing")));
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Manage Property"), backgroundColor: Color(0xFF059669)),
+      body: _isLoading 
+        ? Center(child: CircularProgressIndicator())
+        : FutureBuilder<Map<String, dynamic>>(
+            future: _listingFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
+              if (snapshot.hasError) return Center(child: Text("Error loading details"));
+
+              final listing = snapshot.data!;
+              final mediaList = listing['media'] as List<dynamic>? ?? [];
+              final coverUrl = mediaList.isNotEmpty ? mediaList[0]['file'] : null;
+              final status = listing['status'] ?? 'DRAFT';
+
+              return SingleChildScrollView(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Status Badge
+                    Center(
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: status == 'PUBLISHED' ? Colors.green[100] : Colors.orange[100],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          "Status: $status",
+                          style: TextStyle(
+                            color: status == 'PUBLISHED' ? Colors.green[800] : Colors.orange[800],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+
+                    // Cover Image
+                    if (coverUrl != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: CachedNetworkImage(
+                          imageUrl: _getFullImageUrl(coverUrl),
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    SizedBox(height: 24),
+
+                    // Editable Fields
+                    TextField(
+                      controller: _titleCtrl,
+                      decoration: InputDecoration(labelText: 'Listing Title', border: OutlineInputBorder()),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: _priceCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(labelText: 'Monthly Rent (ZMW)', border: OutlineInputBorder()),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: _descCtrl,
+                      maxLines: 4,
+                      decoration: InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+                    ),
+                    SizedBox(height: 32),
+
+                    // Actions
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _saveChanges,
+                        style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF059669)),
+                        child: Text("Save Changes"),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: _deleteListing,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.red),
+                          foregroundColor: Colors.red,
+                        ),
+                        child: Text("Delete Property"),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+    );
+  }
+}
+'''
+(LIB / "manage_listing_screen.dart").write_text(MANAGE_SCREEN.strip() + "\n", encoding="utf-8")
+
+# ---------------------------------------------------------------- 3. Update Dashboard to Navigate
+DASHBOARD_FILE = LIB / "landlord_dashboard_screen.dart"
+text = DASHBOARD_FILE.read_text(encoding="utf-8")
+
+if "ManageListingScreen" not in text:
+    # Add import
+    text = text.replace(
+        "import 'create_listing_screen.dart';",
+        "import 'create_listing_screen.dart';\nimport 'manage_listing_screen.dart';"
+    )
+
+    # Add onTap to the Card
+    old_card = '''              return Card(
+                clipBehavior: Clip.antiAlias,
+                child: ListTile('''
+    
+    new_card = '''              return Card(
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ManageListingScreen(
+                        listingId: l['id'],
+                        onUpdate: _loadListings, // Refresh when we return
+                      )),
+                    );
+                  },'''
+    
+    text = text.replace(old_card, new_card)
+    DASHBOARD_FILE.write_text(text, encoding="utf-8")
+    print("✅ Patched landlord_dashboard_screen.dart: Added navigation to Manage Screen")
+
+print("""
+==================================================
+🎉 PHASE 30 COMPLETE: MANAGE PROPERTY SCREEN
+==================================================
+
+Go back to your terminal, quit ('q'), and restart the app.
+
+1. Go to Profile -> My Properties (Landlord).
+2. Tap on either of the properties.
+3. You will now open a Management screen where you can see the status, view the image, and edit the Title, Price, and Description.
+4. Click **Save Changes** to update it, or **Delete Property** to remove it completely.
+""")

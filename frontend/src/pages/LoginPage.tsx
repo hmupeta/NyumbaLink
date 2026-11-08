@@ -30,7 +30,10 @@ export default function LoginPage() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-16">
-      <h1 className="text-2xl font-bold mb-6">Log in to NyumbaLink</h1>
+      <div className="flex flex-col items-center mb-6">
+  <img src="/logo.png" alt="NyumbaLink" className="h-16 w-16 object-contain mb-2" />
+  <h1 className="text-2xl font-bold">Log in to NyumbaLink</h1>
+</div>
       {error && <ErrorMessage message={error} />}
       <form onSubmit={submit} className="space-y-4 bg-white p-6 rounded border">
         <div>

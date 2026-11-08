@@ -16,11 +16,19 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       await Provider.of<AuthProvider>(context, listen: false).login(_emailCtrl.text, _passCtrl.text);
-      Navigator.pushReplacementNamed(context, '/home');
+      
+      // FIX: Just pop the login screen. The MainLayout is underneath!
+      if (mounted) {
+        Navigator.pop(context);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
-    setState(() => _loading = false);
+    if (mounted) {
+      setState(() => _loading = false);
+    }
   }
 
   @override
@@ -32,7 +40,13 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text("NyumbaLink", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+              Column(
+  children: [
+    Image.asset("assets/images/logo.png", height: 120),
+    SizedBox(height: 16),
+    Text("NyumbaLink", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+  ],
+),
               SizedBox(height: 40),
               TextField(controller: _emailCtrl, decoration: InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
               SizedBox(height: 16),

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'auth_provider.dart';
-import 'login_screen.dart';
-import 'home_screen.dart';
+import 'main_layout.dart';
 
 void main() {
   runApp(
@@ -19,11 +18,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'NyumbaLink',
       theme: ThemeData(primarySwatch: Colors.green),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => LoginScreen(),
-        '/home': (context) => HomeScreen(),
-      },
+      home: MainLayout(), // Swapped to MainLayout with Bottom Nav
     );
   }
 }

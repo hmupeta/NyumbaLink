@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http_parser/http_parser.dart';
 
 class ApiClient {
   static const String baseUrl = "https://nyumbalink-backend-eaw2.onrender.com/api/v1";
@@ -8,6 +9,16 @@ class ApiClient {
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('access_token');
+  }
+
+  static Future<void> setToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('access_token', token);
+  }
+
+  static Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('access_token');
   }
 
   static Future<Map<String, String>> getHeaders() async {
@@ -18,12 +29,34 @@ class ApiClient {
     };
   }
 
-  static Future<List<dynamic>> getListings() async {
-    final res = await http.get(Uri.parse('$baseUrl/listings/'), headers: await getHeaders());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body)['results'];
-    }
+  static Future<List<dynamic>> getListings({String? query}) async {
+    String url = '$baseUrl/listings/';
+    if (query != null && query.isNotEmpty) url += '?search=$query';
+    final res = await http.get(Uri.parse(url), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load listings');
+  }
+
+  static Future<Map<String, dynamic>> createNeighbourhood(String name) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/neighbourhoods/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'name': name}),
+    );
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return jsonDecode(res.body);
+    }
+    throw Exception('Failed to create neighbourhood');
+  }
+
+  static Future<Map<String, dynamic>> getListingDetail(String id) async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/listings/$id/'), headers: await getHeaders());
+      if (res.statusCode == 200) return jsonDecode(res.body);
+      throw Exception('Server returned ${res.statusCode}: ${res.body}');
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
   }
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
@@ -34,10 +67,194 @@ class ApiClient {
     );
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('access_token', data['access']);
+      await setToken(data['access']);
       return data['user'];
     }
     throw Exception('Invalid credentials');
+  }
+
+  static Future<Map<String, dynamic>> register(String email, String password, String firstName) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/auth/register/'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password, 'first_name': firstName}),
+    );
+    if (res.statusCode == 201) {
+      final data = jsonDecode(res.body);
+      await setToken(data['access']);
+      return data['user'];
+    }
+    throw Exception('Registration failed');
+  }
+
+  // --- Landlord Features ---
+  static Future<List<dynamic>> getMyListings() async {
+    final res = await http.get(Uri.parse('$baseUrl/listings/my_listings/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
+    throw Exception('Failed to load your listings');
+  }
+
+  static Future<List<dynamic>> getNeighbourhoods() async {
+    final res = await http.get(Uri.parse('$baseUrl/neighbourhoods/?page=1'));
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
+    throw Exception('Failed to load locations');
+  }
+
+  static Future<void> createPropertyAndListing({
+    required String title,
+    required String description,
+    required double price,
+    required int bedrooms,
+    required int bathrooms,
+    required double floorArea,
+    required String propertyType,
+    required String neighbourhoodId,
+    required List<int> imageBytes,
+    required String imageName,
+  }) async {
+    // 1. Create Property
+    final propRes = await http.post(
+      Uri.parse('$baseUrl/properties/'),
+      headers: await getHeaders(),
+      body: jsonEncode({
+        'neighbourhood': neighbourhoodId,
+        'property_type': propertyType,
+        'bedrooms': bedrooms,
+        'bathrooms': bathrooms,
+        'floor_area': floorArea,
+        'description': description,
+      }),
+    );
+    if (propRes.statusCode != 201) throw Exception('Failed to create property');
+    final propId = jsonDecode(propRes.body)['id'];
+
+    // 2. Create Listing
+    final listRes = await http.post(
+      Uri.parse('$baseUrl/listings/'),
+      headers: await getHeaders(),
+      body: jsonEncode({
+        'property': propId,
+        'transaction_type': 'RENT',
+        'price': price,
+        'currency': 'ZMW',
+        'title': title,
+        'description': description,
+      }),
+    );
+    if (listRes.statusCode != 201) throw Exception('Failed to create listing');
+    final listingId = jsonDecode(listRes.body)['id'];
+
+    // 3. Upload Image
+    if (imageBytes.isNotEmpty) {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/listings/$listingId/media/'),
+      );
+      final token = await getToken();
+      if (token != null) request.headers['Authorization'] = 'Bearer $token';
+      
+      request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: imageName));
+      request.fields['media_type'] = 'IMAGE';
+      
+      final mediaRes = await request.send();
+      if (mediaRes.statusCode != 201) throw Exception('Listing created, but image upload failed');
+    }
+  }
+
+  static Future<void> updateListing(String id, Map<String, dynamic> data) async {
+    final res = await http.patch(
+      Uri.parse('$baseUrl/listings/$id/'),
+      headers: await getHeaders(),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode != 200) throw Exception('Failed to update listing');
+  }
+
+  static Future<void> deleteListing(String id) async {
+    final res = await http.delete(
+      Uri.parse('$baseUrl/listings/$id/'),
+      headers: await getHeaders(),
+    );
+    if (res.statusCode != 204) throw Exception('Failed to delete listing');
+  }
+
+  // --- Saved Properties ---
+  static Future<List<dynamic>> getSavedListings() async {
+    final res = await http.get(Uri.parse('$baseUrl/saved-listings/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
+    throw Exception('Failed to load saved listings');
+  }
+
+  static Future<void> toggleSaveListing(String listingId, bool isSaved) async {
+    if (isSaved) {
+      await http.delete(Uri.parse('$baseUrl/saved-listings/$listingId/'), headers: await getHeaders());
+    } else {
+      await http.post(
+        Uri.parse('$baseUrl/saved-listings/'),
+        headers: await getHeaders(),
+        body: jsonEncode({'listing_id': listingId}),
+      );
+    }
+  }
+
+  // --- Messaging ---
+  static Future<List<dynamic>> getConversations() async {
+    final res = await http.get(Uri.parse('$baseUrl/conversations/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
+    throw Exception('Failed to load conversations');
+  }
+
+  static Future<String> startConversation(String listingId) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/conversations/start/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'listing_id': listingId}),
+    );
+    if (res.statusCode == 200) return jsonDecode(res.body)['id'];
+    throw Exception('Failed to start chat');
+  }
+
+  static Future<List<dynamic>> getMessages(String conversationId) async {
+    final res = await http.get(
+      Uri.parse('$baseUrl/conversations/$conversationId/messages/'),
+      headers: await getHeaders(),
+    );
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
+    throw Exception('Failed to load messages');
+  }
+
+  static Future<void> sendMessage(String conversationId, String body) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/conversations/$conversationId/messages/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'body': body}),
+    );
+    if (res.statusCode != 201) throw Exception('Failed to send message');
+  }
+
+  static Future<void> sendFileMessage(String conversationId, List<int> fileBytes, String fileName, String type) async {
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/conversations/$conversationId/messages/'),
+    );
+    final token = await getToken();
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    request.fields['body'] = type == 'AUDIO' ? 'Voice Note' : 'Attachment';
+    request.fields['message_type'] = type;
+    request.files.add(http.MultipartFile.fromBytes(
+      'file', fileBytes, filename: fileName,
+      contentType: type == 'AUDIO' ? MediaType('audio', 'mp4') : null,
+    ));
+    final response = await request.send();
+    if (response.statusCode != 201) throw Exception('Failed to send file');
+  }
+
+  static Future<void> reactToMessage(String conversationId, String messageId, String emoji) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/conversations/$conversationId/messages/$messageId/react/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'emoji': emoji}),
+    );
+    if (res.statusCode != 200) throw Exception('Failed to react');
   }
 }
