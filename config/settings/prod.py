@@ -107,3 +107,26 @@ if sentry_dsn:
 # ----------------------------------------------------------------
 SIMPLE_JWT["AUTH_COOKIE_SECURE"] = True
 SIMPLE_JWT["AUTH_COOKIE_SAMESITE"] = "None"
+
+
+# ----------------------------------------------------------------
+# CLOUDINARY MEDIA STORAGE (Django 5.1+)
+# ----------------------------------------------------------------
+import os
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get("CLOUDINARY_CLOUD_NAME", ""),
+    'API_KEY': os.environ.get("CLOUDINARY_API_KEY", ""),
+    'API_SECRET': os.environ.get("CLOUDINARY_API_SECRET", ""),
+}
+
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+MEDIA_URL = "/media/"
