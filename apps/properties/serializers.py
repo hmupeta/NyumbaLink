@@ -20,14 +20,18 @@ class ListingMediaSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "listing")
 
     def get_file(self, obj):
+        placeholder = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image"
         if not obj.file:
-            return None
-        # Check the raw name in the database
+            return placeholder
+        
         name = str(obj.file.name)
-        if name.startswith('http'):
+        # If the name is already an absolute Cloudinary URL, return it
+        if name.startswith('http://') or name.startswith('https://'):
             return name
-        # If it's a local file or Cloudinary path, let Django/Cloudinary build the URL
-        return obj.file.url
+            
+        # If it's a local path (meaning Cloudinary failed), return a placeholder
+        return placeholder
+
 
 
 class PropertySerializer(serializers.ModelSerializer):

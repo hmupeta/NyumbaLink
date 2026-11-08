@@ -241,11 +241,37 @@ class ListingMediaViewSet(viewsets.ModelViewSet):
         ).select_related("listing")
 
     def perform_create(self, serializer):
+        import cloudinary.uploader
+        from django.conf import settings
+        import os
+
         listing = Listing.objects.get(pk=self.kwargs["listing_pk"])
         if not user_can_edit_listing(self.request.user, listing):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You cannot add media to this listing")
-        serializer.save(listing=listing)
+        
+        file = self.request.FILES.get('file')
+        if not file:
+            return serializer.save(listing=listing)
+
+        # Force direct upload to Cloudinary using the env vars
+        try:
+            cloudinary.config(
+                cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+                api_key=os.environ.get("CLOUDINARY_API_KEY"),
+                api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+                secure=True
+            )
+            result = cloudinary.uploader.upload(file, folder="nyumbalink/")
+            
+            # Save the ListingMedia record with the Cloudinary URL as the file name
+            media = serializer.save(listing=listing)
+            media.file.name = result['secure_url']
+            media.save()
+        except Exception as e:
+            print("CLOUDINARY UPLOAD FAILED:", str(e))
+            # Fallback to local storage if Cloudinary fails
+            serializer.save(listing=listing)
 
     def perform_destroy(self, instance):
         if not user_can_edit_listing(self.request.user, instance.listing):
