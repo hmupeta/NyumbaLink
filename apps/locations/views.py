@@ -32,9 +32,45 @@ class LocalityViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = "slug"
 
 
-class NeighbourhoodViewSet(viewsets.ReadOnlyModelViewSet):
+from rest_framework import permissions, status
+from rest_framework.response import Response
+from django.utils.text import slugify
+
+class NeighbourhoodViewSet(viewsets.ModelViewSet):
     queryset = Neighbourhood.objects.select_related("locality").order_by("name")
     serializer_class = NeighbourhoodSerializer
     filterset_fields = ("locality",)
     search_fields = ("name",)
     lookup_field = "slug"
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def create(self, request):
+        name = request.data.get("name")
+        if not name:
+            return Response({"detail": "Name is required"}, status=400)
+            
+        # Check if it already exists (case-insensitive)
+        existing = Neighbourhood.objects.filter(name__iexact=name).first()
+        if existing:
+            return Response(NeighbourhoodSerializer(existing).data, status=200)
+
+        # If it's brand new, attach it to a default locality (e.g. Lusaka)
+        from apps.locations.models import Locality
+        default_locality = Locality.objects.first()
+        if not default_locality:
+            return Response({"detail": "No localities configured in the system."}, status=500)
+
+        slug = slugify(name)
+        # Ensure slug is unique
+        original_slug = slug
+        counter = 1
+        while Neighbourhood.objects.filter(slug=slug).exists():
+            slug = f"{original_slug}-{counter}"
+            counter += 1
+
+        new_hood = Neighbourhood.objects.create(
+            locality=default_locality,
+            name=name,
+            slug=slug
+        )
+        return Response(NeighbourhoodSerializer(new_hood).data, status=201)
