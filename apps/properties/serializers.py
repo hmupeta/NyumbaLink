@@ -12,10 +12,22 @@ class PropertyFeatureSerializer(serializers.ModelSerializer):
 
 
 class ListingMediaSerializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField()
+
     class Meta:
         model = ListingMedia
         fields = ("id", "listing", "file", "media_type", "caption", "display_order")
         read_only_fields = ("id", "listing")
+
+    def get_file(self, obj):
+        if not obj.file:
+            return None
+        # Check the raw name in the database
+        name = str(obj.file.name)
+        if name.startswith('http'):
+            return name
+        # If it's a local file or Cloudinary path, let Django/Cloudinary build the URL
+        return obj.file.url
 
 
 class PropertySerializer(serializers.ModelSerializer):
