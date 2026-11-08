@@ -16,6 +16,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _listings = ApiClient.getListings();
   }
 
+
+  String _getFullImageUrl(String url) {
+    if (url.startsWith('http')) return url;
+    return 'https://nyumbalink-backend-eaw2.onrender.com$url';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     if (imageUrl != null)
                       CachedNetworkImage(
-                        imageUrl: imageUrl.startsWith('http') ? imageUrl : 'https://nyumbalink-backend-eaw2.onrender.com$imageUrl',
+                        imageUrl: _getFullImageUrl(imageUrl),
                         height: 200,
                         width: double.infinity,
                         fit: BoxFit.cover,

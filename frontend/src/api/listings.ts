@@ -63,22 +63,11 @@ export const listingsApi = {
 
 export const getMediaUrl = (url: string) => {
   if (!url) return ''
-  
-  // 1. Handle dummy seed data (e.g. https%3A/images.unsplash.com/... or /media/https%3A/...)
-  if (url.includes('https%3A') || url.includes('http%3A') || url.includes('/media/http')) {
-    const match = url.match(/https?(?:%3A|\:)/)
-    if (match && match.index !== undefined) {
-      const externalUrl = url.substring(match.index);
-      return decodeURIComponent(externalUrl);
-    }
-  }
-  
-  // 2. Standard external URLs (like proper Unsplash links)
+  // If it's already an absolute URL (Cloudinary or Unsplash), return it
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url
   }
-  
-  // 3. Standard local media paths (Render backend)
+  // Otherwise, it's a relative path
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
   const baseUrl = apiUrl.replace('/api/v1', '')
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
