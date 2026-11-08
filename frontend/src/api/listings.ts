@@ -64,12 +64,14 @@ export const listingsApi = {
 export const getMediaUrl = (url: string) => {
   if (!url) return ''
   
-  // 1. If the backend already sent an absolute URL, use it
+  // 1. Absolute URL (Cloudinary, Unsplash)
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url
   }
   
-  // 2. If it's a relative path, prepend the backend base URL
+  // 2. Relative path (e.g. /media/listings/img.jpg)
+  // If we are in development, point to localhost:8000. 
+  // If we are in production, point to the API base URL.
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
   const baseUrl = apiUrl.replace('/api/v1', '')
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
