@@ -44,7 +44,7 @@ class RegisterView(APIView):
 
         refresh = RefreshToken.for_user(user)
         response = Response(
-            {"user": UserSerializer(user).data}, status=status.HTTP_201_CREATED
+            {"user": UserSerializer(user).data, "access": str(refresh.access_token), "refresh": str(refresh)}, status=status.HTTP_201_CREATED
         )
         _set_auth_cookies(response, str(refresh.access_token), str(refresh))
         return response
@@ -71,7 +71,7 @@ class LoginView(APIView):
             )
 
         refresh = RefreshToken.for_user(user)
-        response = Response({"user": UserSerializer(user).data})
+        response = Response({"user": UserSerializer(user).data, "access": str(refresh.access_token), "refresh": str(refresh)})
         _set_auth_cookies(response, str(refresh.access_token), str(refresh))
         return response
 
