@@ -25,13 +25,17 @@ class ListingMediaSerializer(serializers.ModelSerializer):
         
         name = str(obj.file.name)
         
-        # 1. External or Cloudinary URL
+        # 1. External or Cloudinary URL (already absolute)
         if name.startswith('http://') or name.startswith('https://'):
             return name
             
-        # 2. Local file (return relative path like /media/...)
+        # 2. Local file: build the absolute URL (e.g., http://localhost:8000/media/...)
         try:
-            return obj.file.url
+            url = obj.file.url
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(url)
+            return url
         except Exception:
             return None
 
