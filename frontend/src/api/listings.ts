@@ -64,17 +64,12 @@ export const listingsApi = {
 export const getMediaUrl = (url: string) => {
   if (!url) return ''
   
-  // 1. If it starts with /media/http, strip the /media/ prefix
-  if (url.startsWith('/media/http')) {
-    return url.replace('/media/', '')
-  }
-  
-  // 2. Standard absolute URLs (Cloudinary or Unsplash)
+  // 1. If the backend already sent an absolute URL, use it
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url
   }
   
-  // 3. Local paths (Django backend)
+  // 2. If it's a relative path, prepend the backend base URL
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
   const baseUrl = apiUrl.replace('/api/v1', '')
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`

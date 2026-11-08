@@ -15,7 +15,7 @@ export default function Layout() {
       <header className="border-b bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-  <img src="/logo.png" alt="NyumbaLink" className="h-10 w-auto object-contain" />
+  <img src="/logo.png" alt="NyumbaLink" className="h-20 w-auto object-contain" />
   <span className="text-xl font-bold text-emerald-700 tracking-tight">NyumbaLink</span>
 </Link>
           <nav className="flex items-center gap-6 text-sm">

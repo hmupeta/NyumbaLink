@@ -37,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Image.asset("assets/images/logo.png", height: 40),
+            Image.asset("assets/images/logo.png", height: 80),
             SizedBox(width: 8),
             Text("NyumbaLink"),
           ],
