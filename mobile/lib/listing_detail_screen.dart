@@ -23,12 +23,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   
   bool _isSaved = false;
   bool _isSaving = false;
-  String? _viewingStatus; // Tracks 'PENDING', 'APPROVED'
+  String? _viewingStatus;
+  bool _isUnlocked = false;
+  bool _isUnlocking = false;
 
   @override
   void initState() {
     super.initState();
-    _listingFuture = ApiClient.getListingDetail(widget.listingId);
+    _listingFuture = ApiClient.getListingDetail(widget.listingId).then((data) {
+      setState(() => _isUnlocked = data['is_unlocked'] ?? false);
+      return data;
+    });
     _checkViewingStatus();
   }
 
@@ -185,6 +190,44 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            if (_isUnlocked) ...[
+                              Container(
+                                padding: EdgeInsets.all(16),
+                                decoration: BoxDecoration(color: Colors.green[50], border: Border.all(color: Colors.green), borderRadius: BorderRadius.circular(8)),
+                                child: Column(
+                                  children: [
+                                    Text("Contact Details Unlocked", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[800])),
+                                    SizedBox(height: 8),
+                                    Text("+260 97 123 4567", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 12),
+                            ] else ...[
+                              ElevatedButton.icon(
+                                onPressed: _isUnlocking ? null : () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    builder: (context) => _PaymentModal(
+                                      listingId: listing['id'],
+                                      onSuccess: () {
+                                        setState(() => _isUnlocked = true);
+                                      },
+                                    ),
+                                  );
+                                },
+                                icon: _isUnlocking ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Icon(Icons.lock_open),
+                                label: Text(_isUnlocking ? "Unlocking..." : "Unlock Phone Number (K5)"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange[700], 
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  minimumSize: Size(double.infinity, 50),
+                                ),
+                              ),
+                              SizedBox(height: 12),
+                            ],
+
                             ElevatedButton.icon(
                               onPressed: _startingChat ? null : () => _startChat(listing['id'], listing['created_by_email']),
                               icon: _startingChat ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Icon(Icons.message),
@@ -254,6 +297,80 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+
+class _PaymentModal extends StatefulWidget {
+  final String listingId;
+  final VoidCallback onSuccess;
+
+  _PaymentModal({required this.listingId, required this.onSuccess});
+
+  @override
+  _PaymentModalState createState() => _PaymentModalState();
+}
+
+class _PaymentModalState extends State<_PaymentModal> {
+  String _provider = 'MTN';
+  final _phoneCtrl = TextEditingController();
+  bool _isProcessing = false;
+
+  void _pay() async {
+    setState(() => _isProcessing = true);
+    try {
+      await ApiClient.unlockListing(widget.listingId, _provider, _phoneCtrl.text);
+      if (mounted) {
+        Navigator.pop(context);
+        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Payment Successful! Contact Unlocked.")));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+    if (mounted) setState(() => _isProcessing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text("Pay to Unlock", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text("A K5 fee is required to reveal the landlord's contact details. This payment goes directly to the landlord.", style: TextStyle(color: Colors.grey)),
+          SizedBox(height: 24),
+          DropdownButtonFormField<String>(
+            value: _provider,
+            decoration: InputDecoration(labelText: 'Mobile Money Provider', border: OutlineInputBorder()),
+            items: [
+              DropdownMenuItem(value: 'MTN', child: Text("MTN MoMo")),
+              DropdownMenuItem(value: 'AIRTEL', child: Text("Airtel Money")),
+              DropdownMenuItem(value: 'ZAMTEL', child: Text("Zamtel Kwacha")),
+            ],
+            onChanged: (val) => setState(() => _provider = val!),
+          ),
+          SizedBox(height: 16),
+          TextField(
+            controller: _phoneCtrl,
+            decoration: InputDecoration(labelText: 'Your Mobile Money Number', border: OutlineInputBorder(), hintText: "e.g. 0977123456"),
+            keyboardType: TextInputType.phone,
+          ),
+          SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _isProcessing || _phoneCtrl.text.isEmpty ? null : _pay,
+            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF059669), minimumSize: Size(double.infinity, 50)),
+            child: _isProcessing ? CircularProgressIndicator(color: Colors.white) : Text("Pay K5 via $_provider"),
+          ),
+          SizedBox(height: 16),
+        ],
       ),
     );
   }

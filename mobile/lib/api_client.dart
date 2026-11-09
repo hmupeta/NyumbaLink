@@ -224,6 +224,36 @@ class ApiClient {
     if (res.statusCode != 200) throw Exception('Failed to update status');
   }
 
+
+
+  // --- Direct Payments ---
+  static Future<void> unlockListing(String listingId, String provider, String phone) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/unlock/unlock/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'listing_id': listingId, 'provider': provider, 'phone_number': phone}),
+    );
+    if (res.statusCode != 200) {
+      final error = jsonDecode(res.body)['detail'] ?? 'Failed to unlock';
+      throw Exception(error);
+    }
+  }
+
+  static Future<Map<String, dynamic>> getPaymentSettings() async {
+    final res = await http.get(Uri.parse('$baseUrl/payment-settings/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body);
+    throw Exception('Failed to load settings');
+  }
+
+  static Future<void> updatePaymentSettings(Map<String, dynamic> data) async {
+    final res = await http.patch(
+      Uri.parse('$baseUrl/payment-settings/'),
+      headers: await getHeaders(),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode != 200) throw Exception('Failed to update settings');
+  }
+
   // --- Saved Properties ---
   static Future<List<dynamic>> getSavedListings() async {
     final res = await http.get(Uri.parse('$baseUrl/saved-listings/'), headers: await getHeaders());

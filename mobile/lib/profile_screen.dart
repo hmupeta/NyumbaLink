@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'auth_provider.dart';
 import 'login_screen.dart';
 import 'landlord_dashboard_screen.dart';
+import 'payment_settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   @override
@@ -57,6 +58,12 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Verification coming soon to mobile!")));
                   },
+                ),
+                ListTile(
+                  leading: Icon(Icons.payments, color: Color(0xFF059669)),
+                  title: Text("Payment Integrations"),
+                  trailing: Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PaymentSettingsScreen())),
                 ),
                 ListTile(
                   leading: Icon(Icons.logout, color: Colors.red),
