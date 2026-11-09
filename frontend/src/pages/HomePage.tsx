@@ -16,9 +16,34 @@ import IntentCards from '../components/IntentCards'
 
 export default function HomePage() {
   const [searchParams] = useSearchParams()
-  const initialType = searchParams.get('type') === 'sale' ? 'SALE' : searchParams.get('type') === 'rent' ? 'RENT' : undefined
-  
-  const [filters, setFilters] = useState<ListingFilters>({ transaction_type: initialType })
+  const [filters, setFilters] = useState<ListingFilters>({})
+
+  // Sync URL params with filters
+  useEffect(() => {
+    const typeParam = searchParams.get('type');
+    const newType = typeParam === 'sale' ? 'SALE' : typeParam === 'rent' ? 'RENT' : undefined;
+    
+    // Only update if the type actually changed
+    setFilters(prev => {
+      if (prev.transaction_type !== newType) {
+        return { ...prev, transaction_type: newType };
+      }
+      return prev;
+    });
+  }, [searchParams]);
+
+  // Scroll to listings when the URL changes
+  useEffect(() => {
+    if (searchParams.get('type')) {
+      setTimeout(() => {
+        const element = document.getElementById('listings-section');
+        if (element) {
+          const y = element.getBoundingClientRect().top + window.scrollY - 80; // 80px offset for sticky header
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [searchParams]);
   const [showFilters, setShowFilters] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
   const [affordableBudget, setAffordableBudget] = useState<number | undefined>()
