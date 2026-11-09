@@ -178,6 +178,52 @@ class ApiClient {
     if (res.statusCode != 204) throw Exception('Failed to delete listing');
   }
 
+
+  // --- Notifications ---
+  static Future<int> getUnreadNotificationCount() async {
+    final res = await http.get(Uri.parse('$baseUrl/notifications/unread_count/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body)['count'];
+    return 0;
+  }
+
+  static Future<List<dynamic>> getNotifications() async {
+    final res = await http.get(Uri.parse('$baseUrl/notifications/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
+    throw Exception('Failed to load notifications');
+  }
+
+  static Future<void> markAllNotificationsRead() async {
+    await http.post(Uri.parse('$baseUrl/notifications/mark_all_read/'), headers: await getHeaders());
+  }
+
+  // --- Viewing Requests ---
+  static Future<void> requestViewing(String listingId, String dateIso) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/viewings/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'listing': listingId, 'requested_date': dateIso, 'note': 'Requested via mobile app'}),
+    );
+    if (res.statusCode != 201) throw Exception('Failed to request viewing');
+  }
+
+  static Future<List<dynamic>> getViewingRequests() async {
+    final res = await http.get(Uri.parse('$baseUrl/viewings/'), headers: await getHeaders());
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return data['results'] ?? [];
+    }
+    throw Exception('Failed to load viewing requests');
+  }
+
+  static Future<void> updateViewingStatus(String viewingId, String status) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/viewings/$viewingId/update_status/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'status': status}),
+    );
+    if (res.statusCode != 200) throw Exception('Failed to update status');
+  }
+
   // --- Saved Properties ---
   static Future<List<dynamic>> getSavedListings() async {
     final res = await http.get(Uri.parse('$baseUrl/saved-listings/'), headers: await getHeaders());

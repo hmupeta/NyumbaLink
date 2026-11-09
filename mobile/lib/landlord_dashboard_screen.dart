@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'api_client.dart';
 import 'create_listing_screen.dart';
 import 'manage_listing_screen.dart';
+import 'viewing_requests_screen.dart';
 
 class LandlordDashboardScreen extends StatefulWidget {
   @override
@@ -32,7 +33,17 @@ class _LandlordDashboardScreenState extends State<LandlordDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("My Properties"), backgroundColor: Color(0xFF059669)),
+      appBar: AppBar(
+        title: Text("My Properties"), 
+        backgroundColor: Color(0xFF059669),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.calendar_today),
+            tooltip: "Viewing Requests",
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewingRequestsScreen())),
+          )
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => CreateListingScreen()))

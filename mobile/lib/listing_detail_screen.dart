@@ -23,6 +23,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   // We keep track of isSaved locally to update the UI instantly
   bool _isSaved = false;
   bool _isSaving = false;
+  String? _viewingStatus; // Tracks 'PENDING', 'APPROVED', 'REJECTED'
+  bool _checkingViewing = true;
 
   @override
   void initState() {
@@ -169,23 +171,87 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       SizedBox(height: 8),
                       Text(listing['description'] ?? "No description provided.", style: TextStyle(fontSize: 16, height: 1.5)),
                       Divider(height: 32),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: auth.user == null 
-                          ? ElevatedButton.icon(
-                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen())),
-                              icon: Icon(Icons.lock_outline),
-                              label: Text("Log in to Contact Landlord"),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800], shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                            )
-                          : ElevatedButton.icon(
+                      // Condition 1: Not logged in
+                      if (auth.user == null)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen())),
+                            icon: Icon(Icons.lock_outline),
+                            label: Text("Log in to Contact Landlord"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey[800], 
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                            ),
+                          ),
+                        )
+                      // Condition 2: Logged in, show both buttons
+                      else
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ElevatedButton.icon(
                               onPressed: _startingChat ? null : () => _startChat(listing['id'], listing['created_by_email']),
                               icon: _startingChat ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Icon(Icons.message),
                               label: Text(_startingChat ? "Opening Chat..." : "Message Landlord"),
-                              style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF059669), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF059669), 
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                minimumSize: Size(double.infinity, 50),
+                              ),
                             ),
-                      ),
+                            SizedBox(height: 12),
+                            _checkingViewing 
+                              ? SizedBox(height: 50, child: Center(child: CircularProgressIndicator()))
+                              : _viewingStatus == 'APPROVED'
+                                ? Container(
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green[50],
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.green),
+                                    ),
+                                    child: Center(child: Text("✓ Viewing Approved", style: TextStyle(color: Colors.green[800], fontWeight: FontWeight.bold))),
+                                  )
+                                : _viewingStatus == 'PENDING'
+                                  ? Container(
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange[50],
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.orange),
+                                      ),
+                                      child: Center(child: Text("Viewing Requested (Pending)", style: TextStyle(color: Colors.orange[800], fontWeight: FontWeight.bold))),
+                                    )
+                                  : OutlinedButton.icon(
+                                      onPressed: () async {
+                                        final date = await showDatePicker(
+                                          context: context,
+                                          initialDate: DateTime.now().add(Duration(days: 1)),
+                                          firstDate: DateTime.now(),
+                                          lastDate: DateTime.now().add(Duration(days: 30)),
+                                        );
+                                        if (date != null) {
+                                          try {
+                                            await ApiClient.requestViewing(listing['id'], date.toIso8601String());
+                                            setState(() => _viewingStatus = 'PENDING'); // Instantly update UI
+                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Viewing requested!")));
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to request viewing")));
+                                          }
+                                        }
+                                      },
+                                      icon: Icon(Icons.calendar_today, color: Color(0xFF059669)),
+                                      label: Text("Request Viewing", style: TextStyle(color: Color(0xFF059669))),
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(color: Color(0xFF059669)),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        minimumSize: Size(double.infinity, 50),
+                                      ),
+                                    ),
+                          ]
+                        ),
                     ],
                   ),
                 ),

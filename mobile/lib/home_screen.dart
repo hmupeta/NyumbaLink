@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'api_client.dart';
 import 'auth_provider.dart';
 import 'listing_detail_screen.dart';
+import 'notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -12,12 +13,23 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<dynamic>> _listings;
+  int _unreadCount = 0;
   final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _listings = ApiClient.getListings();
+    _fetchNotifications();
+  }
+
+  Future<void> _fetchNotifications() async {
+    try {
+      final count = await ApiClient.getUnreadNotificationCount();
+      if (mounted) setState(() => _unreadCount = count);
+    } catch (e) {
+      // User might not be logged in, ignore
+    }
   }
 
   void _performSearch(String query) {
@@ -42,6 +54,37 @@ class _HomeScreenState extends State<HomeScreen> {
             Text("NyumbaLink"),
           ],
         ),
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: Icon(Icons.notifications),
+                onPressed: () async {
+                  await Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsScreen()));
+                  _fetchNotifications(); // Refresh badge when returning
+                },
+              ),
+              if (_unreadCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: BoxConstraints(minWidth: 18, minHeight: 18),
+                    child: Text(
+                      '$_unreadCount',
+                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
         backgroundColor: Color(0xFF059669),
         automaticallyImplyLeading: false,
         bottom: PreferredSize(
