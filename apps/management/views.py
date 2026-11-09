@@ -11,6 +11,17 @@ class LeaseViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Lease.objects.filter(landlord=self.request.user).prefetch_related("rent_records")
 
+
+    @action(detail=False, methods=["get"])
+    def my_tenancy(self, request):
+        """Returns all active leases where the requesting user is the tenant."""
+        from django.db.models import Q
+        leases = Lease.objects.filter(
+            Q(tenant_email__iexact=request.user.email) |
+            Q(tenant_email="")
+        ).exclude(tenant_email="").prefetch_related("rent_records")
+        return Response(self.get_serializer(leases, many=True).data)
+
     def perform_create(self, serializer):
         # When a lease is created, we automatically generate the first 12 rent records
         lease = serializer.save(landlord=self.request.user)
