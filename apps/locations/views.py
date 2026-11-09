@@ -74,3 +74,25 @@ class NeighbourhoodViewSet(viewsets.ModelViewSet):
             slug=slug
         )
         return Response(NeighbourhoodSerializer(new_hood).data, status=201)
+
+    @action(detail=False, methods=["get"])
+    def top(self, request):
+        # Find neighbourhoods with published listings, ordered by most listings
+        top_hoods = Neighbourhood.objects.annotate(
+            listing_count=Count(
+                'properties__listings',
+                filter=Q(properties__listings__status='PUBLISHED')
+            )
+        ).filter(listing_count__gt=0).order_by('-listing_count')[:5]
+        
+        data = []
+        for hood in top_hoods:
+            data.append({
+                "id": str(hood.id),
+                "name": hood.name,
+                "slug": hood.slug,
+                "locality_name": hood.locality.name,
+                "listing_count": hood.listing_count
+            })
+        return Response(data)
+

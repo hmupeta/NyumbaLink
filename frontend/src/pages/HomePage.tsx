@@ -12,7 +12,7 @@ import ErrorMessage from '../components/ErrorMessage'
 import MapView from '../components/MapView'
 import RecommendationsSection from '../components/RecommendationsSection'
 import AffordabilityCalculator from '../components/AffordabilityCalculator'
-import IntentCards from '../components/IntentCards'
+import TopNeighbourhoods from '../components/TopNeighbourhoods'
 
 export default function HomePage() {
   const [searchParams] = useSearchParams()
@@ -23,12 +23,23 @@ export default function HomePage() {
     const typeParam = searchParams.get('type');
     const newType = typeParam === 'sale' ? 'SALE' : typeParam === 'rent' ? 'RENT' : undefined;
     
-    // Only update if the type actually changed
+    const hoodParam = searchParams.get('neighbourhood');
+    
+    // Only update if things actually changed
     setFilters(prev => {
+      let changed = false;
+      const next = { ...prev };
+      
       if (prev.transaction_type !== newType) {
-        return { ...prev, transaction_type: newType };
+        next.transaction_type = newType;
+        changed = true;
       }
-      return prev;
+      if (hoodParam && prev.neighbourhood !== hoodParam) {
+        next.neighbourhood = hoodParam;
+        changed = true;
+      }
+      
+      return changed ? next : prev;
     });
   }, [searchParams]);
 
@@ -145,7 +156,7 @@ export default function HomePage() {
       </div>
 
       {/* INTENT CARDS (Buy / Rent / Sell) */}
-      <IntentCards />
+      <TopNeighbourhoods />
 
       {/* ZILLOW FEATURES (Recommendations & Calculator) */}
       <RecommendationsSection />
