@@ -86,6 +86,7 @@ class ListingSerializer(serializers.ModelSerializer):
     property_summary = serializers.SerializerMethodField()
     created_by_email = serializers.CharField(source="created_by.email", read_only=True)
     is_saved = serializers.SerializerMethodField()
+    is_unlocked = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
@@ -94,7 +95,7 @@ class ListingSerializer(serializers.ModelSerializer):
             "transaction_type", "price", "currency", "price_period",
             "deposit_months", "title", "description", "available_from",
             "status", "published_at", "expires_at", "rejection_reason",
-            "moderation_note", "media", "is_saved", "views_count", "created_at", "updated_at",
+            "moderation_note", "media", "is_saved", "is_unlocked", "views_count", "created_at", "updated_at",
         )
         read_only_fields = (
             "id", "created_by", "status", "published_at", "expires_at",
@@ -105,6 +106,13 @@ class ListingSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
             return obj.saved_by.filter(user=request.user).exists()
+        return False
+
+    def get_is_unlocked(self, obj):
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            from apps.payments.models import ContactUnlock
+            return ContactUnlock.objects.filter(user=request.user, listing=obj).exists()
         return False
 
     def get_property_summary(self, obj):
