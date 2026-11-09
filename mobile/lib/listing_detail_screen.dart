@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
@@ -20,22 +21,40 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   bool _startingChat = false;
   int _currentImageIndex = 0;
   
-  // We keep track of isSaved locally to update the UI instantly
   bool _isSaved = false;
   bool _isSaving = false;
-  String? _viewingStatus; // Tracks 'PENDING', 'APPROVED', 'REJECTED'
-  bool _checkingViewing = true;
+  String? _viewingStatus; // Tracks 'PENDING', 'APPROVED'
 
   @override
   void initState() {
     super.initState();
-    // Removed the setState inside .then() to prevent crashes if screen is closed early
     _listingFuture = ApiClient.getListingDetail(widget.listingId);
+    _checkViewingStatus();
   }
 
   String _getFullImageUrl(String url) {
     if (url.startsWith('http')) return url;
     return 'https://nyumbalink-backend-eaw2.onrender.com$url';
+  }
+
+  Future<void> _checkViewingStatus() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.user == null) return;
+
+    try {
+      // If this fails or times out, we just silently ignore it and show the default button
+      final requests = await ApiClient.getViewingRequests().timeout(const Duration(seconds: 4));
+      final req = requests.firstWhere(
+        (r) => r['listing'].toString() == widget.listingId,
+        orElse: () => null,
+      );
+      
+      if (mounted && req != null) {
+        setState(() => _viewingStatus = req['status']);
+      }
+    } catch (e) {
+      print("Viewing status check failed: $e");
+    }
   }
 
   void _toggleSave() async {
@@ -90,31 +109,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       body: FutureBuilder<Map<String, dynamic>>(
         future: _listingFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            // Print actual error to console for debugging
-            print("DETAIL ERROR: ${snapshot.error}");
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  SizedBox(height: 16),
-                  Text("Error loading property", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text("Please try again later.", style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            );
-          }
+          if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) return Center(child: Text("Error loading property details"));
 
           final listing = snapshot.data!;
-          // Set local _isSaved on first build
-          if (_isSaved == false && listing['is_saved'] == true) {
-            _isSaved = true;
-          }
-
           final mediaList = listing['media'] as List<dynamic>? ?? [];
 
           return SingleChildScrollView(
@@ -171,7 +169,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       SizedBox(height: 8),
                       Text(listing['description'] ?? "No description provided.", style: TextStyle(fontSize: 16, height: 1.5)),
                       Divider(height: 32),
-                      // Condition 1: Not logged in
+                      
                       if (auth.user == null)
                         SizedBox(
                           width: double.infinity,
@@ -180,13 +178,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen())),
                             icon: Icon(Icons.lock_outline),
                             label: Text("Log in to Contact Landlord"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[800], 
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
-                            ),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800], shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                           ),
                         )
-                      // Condition 2: Logged in, show both buttons
                       else
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -202,54 +196,55 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                               ),
                             ),
                             SizedBox(height: 12),
-                            _checkingViewing 
-                              ? SizedBox(height: 50, child: Center(child: CircularProgressIndicator()))
-                              : _viewingStatus == 'APPROVED'
-                                ? Container(
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      color: Colors.green[50],
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: Colors.green),
-                                    ),
-                                    child: Center(child: Text("✓ Viewing Approved", style: TextStyle(color: Colors.green[800], fontWeight: FontWeight.bold))),
-                                  )
-                                : _viewingStatus == 'PENDING'
-                                  ? Container(
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange[50],
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: Colors.orange),
-                                      ),
-                                      child: Center(child: Text("Viewing Requested (Pending)", style: TextStyle(color: Colors.orange[800], fontWeight: FontWeight.bold))),
-                                    )
-                                  : OutlinedButton.icon(
-                                      onPressed: () async {
-                                        final date = await showDatePicker(
-                                          context: context,
-                                          initialDate: DateTime.now().add(Duration(days: 1)),
-                                          firstDate: DateTime.now(),
-                                          lastDate: DateTime.now().add(Duration(days: 30)),
-                                        );
-                                        if (date != null) {
-                                          try {
-                                            await ApiClient.requestViewing(listing['id'], date.toIso8601String());
-                                            setState(() => _viewingStatus = 'PENDING'); // Instantly update UI
-                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Viewing requested!")));
-                                          } catch (e) {
-                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to request viewing")));
-                                          }
-                                        }
-                                      },
-                                      icon: Icon(Icons.calendar_today, color: Color(0xFF059669)),
-                                      label: Text("Request Viewing", style: TextStyle(color: Color(0xFF059669))),
-                                      style: OutlinedButton.styleFrom(
-                                        side: BorderSide(color: Color(0xFF059669)),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        minimumSize: Size(double.infinity, 50),
-                                      ),
-                                    ),
+                            
+                            // THE SMART VIEWING BUTTON
+                            if (_viewingStatus == 'APPROVED')
+                              Container(
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.green[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.green),
+                                ),
+                                child: Center(child: Text("✓ Viewing Approved", style: TextStyle(color: Colors.green[800], fontWeight: FontWeight.bold))),
+                              )
+                            else if (_viewingStatus == 'PENDING')
+                              Container(
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.orange),
+                                ),
+                                child: Center(child: Text("Viewing Requested (Pending)", style: TextStyle(color: Colors.orange[800], fontWeight: FontWeight.bold))),
+                              )
+                            else
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    initialDate: DateTime.now().add(Duration(days: 1)),
+                                    firstDate: DateTime.now(),
+                                    lastDate: DateTime.now().add(Duration(days: 30)),
+                                  );
+                                  if (date != null) {
+                                    try {
+                                      await ApiClient.requestViewing(listing['id'], date.toIso8601String());
+                                      setState(() => _viewingStatus = 'PENDING'); // Instantly update UI
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Viewing requested!")));
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to request viewing")));
+                                    }
+                                  }
+                                },
+                                icon: Icon(Icons.calendar_today, color: Color(0xFF059669)),
+                                label: Text("Request Viewing", style: TextStyle(color: Color(0xFF059669))),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: Color(0xFF059669)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  minimumSize: Size(double.infinity, 50),
+                                ),
+                              ),
                           ]
                         ),
                     ],
