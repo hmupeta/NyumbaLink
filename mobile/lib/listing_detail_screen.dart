@@ -218,7 +218,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                                   );
                                 },
                                 icon: _isUnlocking ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Icon(Icons.lock_open),
-                                label: Text(_isUnlocking ? "Unlocking..." : "Unlock Phone Number (K5)"),
+                                label: Text(_isUnlocking ? "Unlocking..." : "Unlock Contact (K5 Platform Fee)"),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.orange[700], 
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -234,6 +234,28 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                               label: Text(_startingChat ? "Opening Chat..." : "Message Landlord"),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Color(0xFF059669), 
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                minimumSize: Size(double.infinity, 50),
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            
+                            // NEW: Pay Rent Button
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  builder: (context) => _RentPaymentModal(
+                                    listingId: listing['id'],
+                                    amount: double.parse(listing['price'].toString()),
+                                  ),
+                                );
+                              },
+                              icon: Icon(Icons.payment),
+                              label: Text("Pay Rent / Deposit"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue[700], 
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 minimumSize: Size(double.infinity, 50),
                               ),
@@ -368,6 +390,90 @@ class _PaymentModalState extends State<_PaymentModal> {
             onPressed: _isProcessing || _phoneCtrl.text.isEmpty ? null : _pay,
             style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF059669), minimumSize: Size(double.infinity, 50)),
             child: _isProcessing ? CircularProgressIndicator(color: Colors.white) : Text("Pay K5 via $_provider"),
+          ),
+          SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+}
+
+
+class _RentPaymentModal extends StatefulWidget {
+  final String listingId;
+  final double amount;
+
+  _RentPaymentModal({required this.listingId, required this.amount});
+
+  @override
+  _RentPaymentModalState createState() => _RentPaymentModalState();
+}
+
+class _RentPaymentModalState extends State<_RentPaymentModal> {
+  String _paymentType = 'RENT';
+  String _provider = 'MTN';
+  final _phoneCtrl = TextEditingController();
+  bool _isProcessing = false;
+
+  void _pay() async {
+    setState(() => _isProcessing = true);
+    try {
+      await ApiClient.payRent(widget.listingId, widget.amount, _paymentType, _phoneCtrl.text);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Payment Successful! Routed directly to Landlord.")));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+    if (mounted) setState(() => _isProcessing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text("Pay to Landlord", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text("This payment goes directly to the landlord's Mobile Money account.", style: TextStyle(color: Colors.grey)),
+          SizedBox(height: 24),
+          DropdownButtonFormField<String>(
+            value: _paymentType,
+            decoration: InputDecoration(labelText: 'Payment Type', border: OutlineInputBorder()),
+            items: [
+              DropdownMenuItem(value: 'RENT', child: Text("Monthly Rent (K${widget.amount})")),
+              DropdownMenuItem(value: 'DEPOSIT', child: Text("Security Deposit (K${widget.amount * 2})")),
+            ],
+            onChanged: (val) => setState(() => _paymentType = val!),
+          ),
+          SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _provider,
+            decoration: InputDecoration(labelText: 'Mobile Money Provider', border: OutlineInputBorder()),
+            items: [
+              DropdownMenuItem(value: 'MTN', child: Text("MTN MoMo")),
+              DropdownMenuItem(value: 'AIRTEL', child: Text("Airtel Money")),
+              DropdownMenuItem(value: 'ZAMTEL', child: Text("Zamtel Kwacha")),
+            ],
+            onChanged: (val) => setState(() => _provider = val!),
+          ),
+          SizedBox(height: 16),
+          TextField(
+            controller: _phoneCtrl,
+            decoration: InputDecoration(labelText: 'Your Mobile Money Number', border: OutlineInputBorder(), hintText: "e.g. 0977123456"),
+            keyboardType: TextInputType.phone,
+          ),
+          SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _isProcessing || _phoneCtrl.text.isEmpty ? null : _pay,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], minimumSize: Size(double.infinity, 50)),
+            child: _isProcessing ? CircularProgressIndicator(color: Colors.white) : Text("Pay via $_provider"),
           ),
           SizedBox(height: 16),
         ],

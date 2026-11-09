@@ -226,6 +226,19 @@ class ApiClient {
 
 
 
+  static Future<Map<String, dynamic>> post(String path, Map<String, dynamic> data) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl$path'),
+      headers: await getHeaders(),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return jsonDecode(res.body);
+    }
+    final error = jsonDecode(res.body)['detail'] ?? 'Request failed';
+    throw Exception(error);
+  }
+
   // --- Direct Payments ---
   static Future<void> unlockListing(String listingId, String provider, String phone) async {
     final res = await http.post(
@@ -235,6 +248,19 @@ class ApiClient {
     );
     if (res.statusCode != 200) {
       final error = jsonDecode(res.body)['detail'] ?? 'Failed to unlock';
+      throw Exception(error);
+    }
+  }
+
+
+  static Future<void> payRent(String listingId, double amount, String type, String phone) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/rent/pay_rent/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'listing_id': listingId, 'amount': amount, 'type': type, 'phone_number': phone}),
+    );
+    if (res.statusCode != 200) {
+      final error = jsonDecode(res.body)['detail'] ?? 'Payment failed';
       throw Exception(error);
     }
   }

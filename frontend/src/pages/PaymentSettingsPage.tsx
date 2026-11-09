@@ -28,6 +28,32 @@ export default function PaymentSettingsPage() {
     onError: (err: any) => setError(err.message || 'Failed to save.')
   })
 
+  const generateMTNMutation = useMutation({
+    mutationFn: (subKey: string) => fetch(`${import.meta.env.VITE_API_URL}/payment-settings/generate_mtn_user/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${document.cookie.split('access=')[1]?.split(';')[0]}` },
+      body: JSON.stringify({ mtn_subscription_key: subKey })
+    }).then(res => res.json().then(data => { if (!res.ok) throw new Error(data.detail); return data; })),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['payment-settings'] });
+      setSuccess(`API User generated! User: ${data.api_user}`);
+      setError('');
+    },
+    onError: (err: any) => setError(err.message)
+  });
+
+  const testMTNMutation = useMutation({
+    mutationFn: () => fetch(`${import.meta.env.VITE_API_URL}/payment-settings/test_mtn_connection/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${document.cookie.split('access=')[1]?.split(';')[0]}` }
+    }).then(res => res.json().then(data => { if (!res.ok) throw new Error(data.detail); return data; })),
+    onSuccess: () => {
+      setSuccess('Connection successful! MTN Sandbox is reachable.');
+      setError('');
+    },
+    onError: (err: any) => setError(err.message)
+  });
+
   const stripeMutation = useMutation({
     mutationFn: () => integrationsApi.connectStripe(
       window.location.origin + '/settings',
@@ -123,30 +149,33 @@ export default function PaymentSettingsPage() {
       )}
 
       {activeTab === 'MTN' && (
-        <form onSubmit={handleSave} className="bg-white border rounded-lg p-6 space-y-4">
-          <h2 className="font-bold">MTN MoMo Zambia</h2>
-          <p className="text-sm text-gray-600">Enter your MTN MoMo API credentials from the MTN Developer Portal.</p>
-          <div>
-            <label className="block text-sm font-medium mb-1">API User</label>
-            <input name="mtn_api_user" defaultValue={settings?.mtn_api_user || ''} className="w-full border rounded px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">API Key</label>
-            <input name="mtn_api_key" type="password" placeholder="Leave blank to keep current" className="w-full border rounded px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Subscription Key</label>
-            <input name="mtn_subscription_key" type="password" placeholder="Leave blank to keep current" className="w-full border rounded px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Environment</label>
-            <select name="mtn_target_environment" defaultValue={settings?.mtn_target_environment || 'mtnzambia'} className="w-full border rounded px-3 py-2">
-              <option value="sandbox">Sandbox (EUR)</option>
-              <option value="mtnzambia">Production (ZMW)</option>
-            </select>
-          </div>
-          <button type="submit" disabled={updateMutation.isPending} className="bg-emerald-600 text-white px-4 py-2 rounded">Save MTN Settings</button>
-        </form>
+        <div className="space-y-6">
+          {settings?.mtn_api_user ? (
+            <div className="bg-green-50 border border-green-200 p-6 rounded-lg">
+              <h2 className="font-bold text-green-800 mb-2">MTN MoMo is Connected</h2>
+              <p className="text-sm text-green-700 mb-4">API User: <strong>{settings.mtn_api_user}</strong></p>
+              <button onClick={() => testMTNMutation.mutate()} disabled={testMTNMutation.isPending} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                {testMTNMutation.isPending ? 'Testing...' : 'Test Connection'}
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              generateMTNMutation.mutate(formData.get('mtn_subscription_key') as string);
+            }} className="bg-white border rounded-lg p-6 space-y-4">
+              <h2 className="font-bold">Connect MTN MoMo (Sandbox)</h2>
+              <p className="text-sm text-gray-600">Enter your Primary Key (Subscription Key) from the MTN Developer Portal. We will automatically generate your API User and API Key.</p>
+              <div>
+                <label className="block text-sm font-medium mb-1">MTN Primary Key</label>
+                <input name="mtn_subscription_key" type="password" placeholder="e.g. 9b8a..." required className="w-full border rounded px-3 py-2" />
+              </div>
+              <button type="submit" disabled={generateMTNMutation.isPending} className="bg-emerald-600 text-white px-4 py-2 rounded w-full">
+                {generateMTNMutation.isPending ? 'Generating...' : 'Generate API User & Key'}
+              </button>
+            </form>
+          )}
+        </div>
       )}
 
       {activeTab === 'AIRTEL' && (
