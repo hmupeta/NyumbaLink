@@ -55,6 +55,33 @@ class _LeaseAgreementScreenState extends State<LeaseAgreementScreen> {
     if (mounted) setState(() => _isProcessing = false);
   }
 
+  void _showPaymentModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Pay Rent & Deposit", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Text("Payment processing will be integrated here (MTN/Airtel)."),
+            SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Payment Successful!")));
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF059669), minimumSize: Size(double.infinity, 50)),
+              child: Text("Pay Now"),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
@@ -136,16 +163,32 @@ class _LeaseAgreementScreenState extends State<LeaseAgreementScreen> {
                       ),
                     )
                   else if (isLandlord || isTenant)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: userSigned || _isProcessing ? null : _sign,
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700]),
-                        child: _isProcessing 
-                          ? CircularProgressIndicator(color: Colors.white) 
-                          : Text(userSigned ? "You have signed" : "Digitally Sign Agreement"),
-                      ),
+                    Column(
+                      children: [
+                        if (userSigned && isTenant && !bothSigned)
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton.icon(
+                              onPressed: _showPaymentModal,
+                              icon: Icon(Icons.payment),
+                              label: Text("Pay Rent & Deposit Now"),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: userSigned || _isProcessing ? null : _sign,
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700]),
+                              child: _isProcessing 
+                                ? CircularProgressIndicator(color: Colors.white) 
+                                : Text(userSigned ? "You have signed" : "Digitally Sign Agreement"),
+                            ),
+                          )
+                      ],
                     )
                 ]
               ],

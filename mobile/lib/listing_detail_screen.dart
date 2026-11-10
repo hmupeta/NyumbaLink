@@ -6,6 +6,7 @@ import 'api_client.dart';
 import 'auth_provider.dart';
 import 'chat_screen.dart';
 import 'login_screen.dart';
+import 'lease_agreement_screen.dart';
 import 'landlord_profile_screen.dart';
 
 class ListingDetailScreen extends StatefulWidget {
@@ -274,20 +275,24 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                             ),
                             SizedBox(height: 12),
                             
-                            // NEW: Pay Rent Button
+                            // NEW: Apply & Sign Lease Button
                             ElevatedButton.icon(
-                              onPressed: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  builder: (context) => _RentPaymentModal(
-                                    listingId: listing['id'],
-                                    amount: double.parse(listing['price'].toString()),
-                                  ),
-                                );
+                              onPressed: () async {
+                                try {
+                                  // 1. Create/Get the lease from backend
+                                  final lease = await ApiClient.requestLease(listing['id']);
+                                  // 2. Navigate to the Lease Agreement screen to read and sign
+                                  if (mounted) {
+                                    Navigator.push(context, MaterialPageRoute(
+                                      builder: (_) => LeaseAgreementScreen(leaseId: lease['id'])
+                                    ));
+                                  }
+                                } catch (e) {
+                                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                                }
                               },
-                              icon: Icon(Icons.payment),
-                              label: Text("Pay Rent / Deposit"),
+                              icon: Icon(Icons.description),
+                              label: Text("Apply & Sign Lease Agreement"),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue[700], 
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

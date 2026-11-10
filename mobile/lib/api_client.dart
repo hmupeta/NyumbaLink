@@ -494,6 +494,16 @@ class ApiClient {
     throw Exception('Failed to sign lease');
   }
 
+  static Future<Map<String, dynamic>> requestLease(String listingId) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/leases/request_lease/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'listing_id': listingId}),
+    );
+    if (res.statusCode == 200 || res.statusCode == 201) return jsonDecode(res.body);
+    throw Exception('Failed to request lease');
+  }
+
   // --- Saved Properties ---
   static Future<List<dynamic>> getSavedListings() async {
     final res = await http.get(Uri.parse('$baseUrl/saved-listings/'), headers: await getHeaders());
