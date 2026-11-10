@@ -15,6 +15,7 @@ import PaymentSettingsPage from './pages/PaymentSettingsPage'
 import InboxPage from './pages/InboxPage'
 import SavedPropertiesPage from './pages/SavedPropertiesPage'
 import PublicProfilePage from './pages/PublicProfilePage'
+import LeaseAgreementPage from './pages/LeaseAgreementPage'
 import ModerationPage from './pages/ModerationPage'
 import AdminDashboard from './pages/AdminDashboard'
 import ProtectedRoute from './auth/ProtectedRoute'
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/verification" element={<VerificationPage />} />
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/settings" element={<PaymentSettingsPage />} />
+          <Route path="/leases/:id" element={<LeaseAgreementPage />} />
           <Route path="/moderation" element={<ModerationPage />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/inbox" element={<InboxPage />} />

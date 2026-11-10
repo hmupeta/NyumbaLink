@@ -38,7 +38,12 @@ export default function TenantsList() {
               onClick={() => setExpandedLease(isExpanded ? null : lease.id)}
             >
               <div>
-                <h3 className="font-bold text-lg text-gray-900">{lease.tenant_name}</h3>
+                <div className="flex items-center gap-4">
+                        <h3 className="font-bold text-lg text-gray-900">{lease.tenant_name}</h3>
+                        <a href={`/leases/${lease.id}`} className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded hover:bg-emerald-200 transition">
+                          Manage Lease / Sign
+                        </a>
+                      </div>
                 <p className="text-sm text-gray-600">{lease.property_name} · {lease.tenant_phone}</p>
                 <p className="text-xs text-gray-500 mt-1">Lease ends: {new Date(lease.end_date).toLocaleDateString()}</p>
               </div>
