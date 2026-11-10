@@ -7,6 +7,8 @@ import 'listing_detail_screen.dart';
 import 'notifications_screen.dart';
 import 'saved_searches_screen.dart';
 import 'map_view.dart';
+import 'terms_screen.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -28,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchListings();
+    _fetchListings(fromInit: true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       if (auth.user != null) {
@@ -37,16 +39,20 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _fetchListings() {
-    setState(() {
-      _listings = ApiClient.getListings(
-        query: _searchController.text,
-        transactionType: _transactionType,
-        propertyType: _propertyType,
-        minBedrooms: _minBedrooms,
-        maxPrice: _maxPrice,
-      );
-    });
+  void _fetchListings({bool fromInit = false}) {
+    final future = ApiClient.getListings(
+      query: _searchController.text,
+      transactionType: _transactionType,
+      propertyType: _propertyType,
+      minBedrooms: _minBedrooms,
+      maxPrice: _maxPrice,
+    );
+
+    if (fromInit) {
+      _listings = future;
+    } else {
+      setState(() => _listings = future);
+    }
   }
 
   Future<void> _fetchNotifications() async {
@@ -212,13 +218,52 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildIntroCard(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        border: Border(bottom: BorderSide(color: Colors.green[200]!, width: 2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Find your place. Connect your world.",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+          ),
+          SizedBox(height: 8),
+          Text(
+            "NyumbaLink bridges the gap between tenants and landlords in Zambia. Browse verified properties, chat directly with landlords, and pay rent or deposits securely via MTN, Airtel, or Zamtel Mobile Money.",
+            style: TextStyle(fontSize: 14, height: 1.5, color: Colors.grey[800]),
+          ),
+          SizedBox(height: 12),
+          GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TermsScreen())),
+            child: Text(
+              "Read our Terms & Conditions",
+              style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
-            Image.asset("assets/images/logo.png", height: 80),
+            Image.asset(
+              "assets/images/logo.png", 
+              height: 50,
+              errorBuilder: (context, error, stackTrace) => Icon(Icons.home, color: Colors.white, size: 30),
+            ),
             SizedBox(width: 8),
             Text("NyumbaLink"),
           ],
@@ -226,6 +271,11 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Color(0xFF059669),
         automaticallyImplyLeading: false,
         actions: [
+          if (auth.user == null)
+            TextButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen())),
+              child: Text("Login", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
           IconButton(
             icon: Icon(Icons.bookmark),
             tooltip: "Saved Searches",
@@ -308,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
         future: _listings,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text("Error loading listings"));
+          if (snapshot.hasError) return Center(child: Text("Error loading listings: ${snapshot.error}"));
 
           final listings = snapshot.data!;
           if (listings.isEmpty) return Center(child: Text("No properties found."));
@@ -319,9 +369,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 MapView(listings: listings)
               else
                 ListView.builder(
-                  itemCount: listings.length,
+                  itemCount: listings.length + 1, // +1 for the header
                   itemBuilder: (context, index) {
-                    final l = listings[index];
+                    if (index == 0) {
+                      return _buildIntroCard(context);
+                    }
+                    final l = listings[index - 1];
                     final imageUrl = l['media'].isNotEmpty ? l['media'][0]['file'] : null;
 
                     return GestureDetector(

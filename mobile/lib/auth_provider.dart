@@ -6,7 +6,10 @@ class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? get user => _user;
 
   Future<void> login(String email, String password) async {
-    _user = await ApiClient.login(email, password);
+    try {
+      _user = await ApiClient.login(email, password);
+      notifyListeners();
+    } catch (e) { rethrow; }
     notifyListeners();
   }
 

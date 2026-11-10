@@ -21,6 +21,13 @@ class Lease(TimeStampedModel):
     deposit_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+    
+    # Agreement & Signature Tracking
+    agreement_text = models.TextField(blank=True, help_text="Generated legal lease agreement")
+    landlord_signed = models.BooleanField(default=False)
+    tenant_signed = models.BooleanField(default=False)
+    landlord_signed_at = models.DateTimeField(null=True, blank=True)
+    tenant_signed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.tenant_name} @ {self.property.neighbourhood.name}"

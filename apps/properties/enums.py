@@ -27,6 +27,7 @@ class PricePeriod(models.TextChoices):
 
 class PropertyStatus(models.TextChoices):
     ACTIVE = "ACTIVE", "Active"
+    OCCUPIED = "OCCUPIED", "Occupied (Leased)"
     ARCHIVED = "ARCHIVED", "Archived"
 
 

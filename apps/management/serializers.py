@@ -14,5 +14,5 @@ class LeaseSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Lease
-        fields = ("id", "property", "property_name", "tenant_name", "tenant_phone", "tenant_email", "start_date", "end_date", "monthly_rent", "deposit_paid", "status", "rent_records", "created_at")
+        fields = ("id", "property", "property_name", "tenant_name", "tenant_phone", "tenant_email", "start_date", "end_date", "monthly_rent", "deposit_paid", "status", "agreement_text", "landlord_signed", "tenant_signed", "rent_records", "created_at")
         read_only_fields = ("id", "landlord", "created_at")
