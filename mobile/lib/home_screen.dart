@@ -13,34 +13,160 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<dynamic>> _listings;
-  int _unreadCount = 0;
   final _searchController = TextEditingController();
+  int _unreadCount = 0;
+
+  // Filter State
+  String? _transactionType;
+  String? _propertyType;
+  int? _minBedrooms;
+  double? _maxPrice;
+  
+  final _priceController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _listings = ApiClient.getListings();
+    _fetchListings();
     _fetchNotifications();
+  }
+
+  void _fetchListings() {
+    setState(() {
+      _listings = ApiClient.getListings(
+        query: _searchController.text,
+        transactionType: _transactionType,
+        propertyType: _propertyType,
+        minBedrooms: _minBedrooms,
+        maxPrice: _maxPrice,
+      );
+    });
   }
 
   Future<void> _fetchNotifications() async {
     try {
       final count = await ApiClient.getUnreadNotificationCount();
       if (mounted) setState(() => _unreadCount = count);
-    } catch (e) {
-      // User might not be logged in, ignore
-    }
-  }
-
-  void _performSearch(String query) {
-    setState(() {
-      _listings = ApiClient.getListings(query: query);
-    });
+    } catch (e) {}
   }
 
   String _getFullImageUrl(String url) {
     if (url.startsWith('http')) return url;
     return 'https://nyumbalink-backend-eaw2.onrender.com$url';
+  }
+
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 16, right: 16, top: 24
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Filters", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                      TextButton(
+                        onPressed: () {
+                          setModalState(() {
+                            _transactionType = null;
+                            _propertyType = null;
+                            _minBedrooms = null;
+                            _maxPrice = null;
+                            _priceController.clear();
+                          });
+                        },
+                        child: Text("Clear All", style: TextStyle(color: Colors.red)),
+                      )
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  
+                  Text("Transaction Type", style: TextStyle(fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildChoiceChip("Rent", _transactionType == 'RENT', () => setModalState(() => _transactionType = 'RENT')),
+                      SizedBox(width: 8),
+                      _buildChoiceChip("Buy", _transactionType == 'SALE', () => setModalState(() => _transactionType = 'SALE')),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+
+                  Text("Property Type", style: TextStyle(fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _propertyType,
+                    decoration: InputDecoration(labelText: 'Select Property Type', border: OutlineInputBorder()),
+                    items: ['HOUSE', 'APARTMENT', 'TOWNHOUSE', 'LAND']
+                        .map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                    onChanged: (val) => setModalState(() => _propertyType = val),
+                  ),
+                  SizedBox(height: 16),
+
+                  Text("Min Bedrooms", style: TextStyle(fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  Row(
+                    children: [1, 2, 3, 4].map((num) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: _buildChoiceChip("$num", _minBedrooms == num, () => setModalState(() => _minBedrooms = num)),
+                      );
+                    }).toList(),
+                  ),
+                  SizedBox(height: 16),
+
+                  Text("Max Price (ZMW)", style: TextStyle(fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _priceController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(hintText: "e.g. 10000", border: OutlineInputBorder()),
+                    onChanged: (val) {
+                      _maxPrice = double.tryParse(val);
+                    },
+                  ),
+                  SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _fetchListings();
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF059669)),
+                      child: Text("Apply Filters"),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                ],
+              ),
+            );
+          }
+        );
+      }
+    );
+  }
+
+  Widget _buildChoiceChip(String label, bool isSelected, VoidCallback onTap) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => onTap(),
+      selectedColor: Color(0xFF059669).withOpacity(0.2),
+      labelStyle: TextStyle(color: isSelected ? Color(0xFF059669) : Colors.black),
+    );
   }
 
   @override
@@ -54,6 +180,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Text("NyumbaLink"),
           ],
         ),
+        backgroundColor: Color(0xFF059669),
+        automaticallyImplyLeading: false,
         actions: [
           Stack(
             children: [
@@ -61,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(Icons.notifications),
                 onPressed: () async {
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsScreen()));
-                  _fetchNotifications(); // Refresh badge when returning
+                  _fetchNotifications();
                 },
               ),
               if (_unreadCount > 0)
@@ -70,38 +198,44 @@ class _HomeScreenState extends State<HomeScreen> {
                   top: 6,
                   child: Container(
                     padding: EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
                     constraints: BoxConstraints(minWidth: 18, minHeight: 18),
-                    child: Text(
-                      '$_unreadCount',
-                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
+                    child: Text('$_unreadCount', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                   ),
                 ),
             ],
           ),
         ],
-        backgroundColor: Color(0xFF059669),
-        automaticallyImplyLeading: false,
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(60),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: TextField(
-              controller: _searchController,
-              onSubmitted: _performSearch,
-              decoration: InputDecoration(
-                hintText: 'Search by neighbourhood...',
-                filled: true,
-                fillColor: Colors.white,
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-                contentPadding: EdgeInsets.symmetric(vertical: 0),
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onSubmitted: (_) => _fetchListings(),
+                    decoration: InputDecoration(
+                      hintText: 'Search by neighbourhood...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                      contentPadding: EdgeInsets.symmetric(vertical: 0),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
+                  child: IconButton(
+                    icon: Icon(Icons.tune, color: Color(0xFF059669)),
+                    onPressed: _showFilterSheet,
+                    tooltip: "Filters",
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -113,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (snapshot.hasError) return Center(child: Text("Error loading listings"));
           
           final listings = snapshot.data!;
-          if (listings.isEmpty) return Center(child: Text("No properties found."));
+          if (listings.isEmpty) return Center(child: Text("No properties found. Try clearing filters."));
 
           return ListView.builder(
             itemCount: listings.length,

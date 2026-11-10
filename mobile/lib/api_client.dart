@@ -29,10 +29,22 @@ class ApiClient {
     };
   }
 
-  static Future<List<dynamic>> getListings({String? query}) async {
-    String url = '$baseUrl/listings/';
-    if (query != null && query.isNotEmpty) url += '?search=$query';
-    final res = await http.get(Uri.parse(url), headers: await getHeaders());
+  static Future<List<dynamic>> getListings({
+    String? query, 
+    String? transactionType, 
+    String? propertyType, 
+    int? minBedrooms, 
+    double? maxPrice
+  }) async {
+    final params = <String, String>{};
+    if (query != null && query.isNotEmpty) params['search'] = query;
+    if (transactionType != null && transactionType.isNotEmpty) params['transaction_type'] = transactionType;
+    if (propertyType != null && propertyType.isNotEmpty) params['property_type'] = propertyType;
+    if (minBedrooms != null) params['min_bedrooms'] = minBedrooms.toString();
+    if (maxPrice != null) params['max_price'] = maxPrice.toString();
+
+    final uri = Uri.parse('$baseUrl/listings/').replace(queryParameters: params);
+    final res = await http.get(uri, headers: await getHeaders());
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load listings');
   }
@@ -232,11 +244,21 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode(data),
     );
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      return jsonDecode(res.body);
+    
+    // Safety: If the server returns HTML (like a 500 error page), don't crash trying to parse it as JSON
+    try {
+      final decoded = jsonDecode(res.body);
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return decoded;
+      }
+      final error = decoded['detail'] ?? 'Request failed';
+      throw Exception(error);
+    } catch (e) {
+      if (e is FormatException) {
+        throw Exception("Server error (${res.statusCode}). Please try again later.");
+      }
+      rethrow;
     }
-    final error = jsonDecode(res.body)['detail'] ?? 'Request failed';
-    throw Exception(error);
   }
 
   // --- Direct Payments ---
@@ -278,6 +300,106 @@ class ApiClient {
       body: jsonEncode(data),
     );
     if (res.statusCode != 200) throw Exception('Failed to update settings');
+  }
+
+
+  // --- KYC / Verification ---
+  static Future<List<dynamic>> getVerificationCases() async {
+    final res = await http.get(Uri.parse('$baseUrl/verifications/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
+    throw Exception('Failed to load verifications');
+  }
+
+  static Future<Map<String, dynamic>> createVerificationCase(String type) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/verifications/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'verification_type': type}),
+    );
+    if (res.statusCode == 201) return jsonDecode(res.body);
+    throw Exception('Failed to create verification case');
+  }
+
+  static Future<void> uploadVerificationDocument(String caseId, List<int> fileBytes, String fileName, String docType) async {
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/verifications/$caseId/documents/'),
+    );
+    final token = await getToken();
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    
+    request.fields['document_type'] = docType;
+    request.files.add(http.MultipartFile.fromBytes('file', fileBytes, filename: fileName));
+    
+    final response = await request.send();
+    if (response.statusCode != 201) throw Exception('Failed to upload document');
+  }
+
+
+  // --- Profiles & Reviews ---
+  static Future<Map<String, dynamic>> getPublicProfile(String userId) async {
+    final res = await http.get(Uri.parse('$baseUrl/profiles/$userId/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body);
+    throw Exception('Failed to load profile');
+  }
+
+  static Future<void> submitReview(String userId, int rating, String comment) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/profiles/$userId/reviews/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'rating': rating, 'comment': comment}),
+    );
+    if (res.statusCode != 201) {
+      final error = jsonDecode(res.body);
+      throw Exception(error.values.first[0] ?? 'Failed to submit review');
+    }
+  }
+
+
+  // --- Management (Tenants & Leases) ---
+  static Future<List<dynamic>> getLeases() async {
+    final res = await http.get(Uri.parse('$baseUrl/leases/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
+    throw Exception('Failed to load leases');
+  }
+
+  static Future<void> markRentPaid(String leaseId, String recordId) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/leases/$leaseId/rent-records/$recordId/mark_paid/'),
+      headers: await getHeaders(),
+    );
+    if (res.statusCode != 200) throw Exception('Failed to mark rent paid');
+  }
+
+  static Future<List<dynamic>> getMyTenancy() async {
+    final res = await http.get(Uri.parse('$baseUrl/leases/my_tenancy/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body);
+    throw Exception('Failed to load tenancy');
+  }
+
+  static Future<void> createMaintenanceRequest(Map<String, dynamic> data) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/maintenance/'),
+      headers: await getHeaders(),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode != 201) throw Exception('Failed to log maintenance');
+  }
+
+  // --- Maintenance ---
+  static Future<List<dynamic>> getMaintenanceRequests() async {
+    final res = await http.get(Uri.parse('$baseUrl/maintenance/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
+    throw Exception('Failed to load maintenance requests');
+  }
+
+  static Future<void> updateMaintenanceStatus(String id, String status) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/maintenance/$id/update_status/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'status': status}),
+    );
+    if (res.statusCode != 200) throw Exception('Failed to update maintenance status');
   }
 
   // --- Saved Properties ---

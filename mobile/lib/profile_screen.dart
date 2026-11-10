@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'auth_provider.dart';
 import 'login_screen.dart';
 import 'landlord_dashboard_screen.dart';
+import 'tenant_portal_screen.dart';
+import 'verification_screen.dart';
 import 'payment_settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -44,6 +46,12 @@ class ProfileScreen extends StatelessWidget {
                 Text(auth.user!['email'], style: TextStyle(color: Colors.grey)),
                 Divider(height: 40),
                 ListTile(
+                  leading: Icon(Icons.vpn_key, color: Colors.orange[700]),
+                  title: Text("My Tenancy (Tenant)"),
+                  trailing: Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TenantPortalScreen())),
+                ),
+                ListTile(
                   leading: Icon(Icons.home_work, color: Color(0xFF059669)),
                   title: Text("My Properties (Landlord)"),
                   trailing: Icon(Icons.chevron_right),
@@ -53,11 +61,9 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 ListTile(
                   leading: Icon(Icons.verified_user, color: Color(0xFF059669)),
-                  title: Text("Verification"),
+                  title: Text("Verification Center"),
                   trailing: Icon(Icons.chevron_right),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Verification coming soon to mobile!")));
-                  },
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => VerificationScreen())),
                 ),
                 ListTile(
                   leading: Icon(Icons.payments, color: Color(0xFF059669)),

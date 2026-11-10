@@ -6,6 +6,7 @@ import 'api_client.dart';
 import 'auth_provider.dart';
 import 'chat_screen.dart';
 import 'login_screen.dart';
+import 'landlord_profile_screen.dart';
 
 class ListingDetailScreen extends StatefulWidget {
   final String listingId;
@@ -174,6 +175,39 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       SizedBox(height: 8),
                       Text(listing['description'] ?? "No description provided.", style: TextStyle(fontSize: 16, height: 1.5)),
                       Divider(height: 32),
+
+                      // Landlord Info Row
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => LandlordProfileScreen(
+                              landlordId: listing['created_by'],
+                              landlordEmail: listing['created_by_email'] ?? '',
+                            )
+                          ));
+                        },
+                        child: Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey[300]!)),
+                          child: Row(
+                            children: [
+                              CircleAvatar(backgroundColor: Color(0xFF059669), child: Icon(Icons.person, color: Colors.white)),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text("Advertised by", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                                    Text(listing['created_by_email'] ?? 'Landlord', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.chevron_right, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 24),
                       
                       if (auth.user == null)
                         SizedBox(
