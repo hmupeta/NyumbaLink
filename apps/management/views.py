@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
@@ -152,6 +153,63 @@ RENT: ZMW {lease.monthly_rent} payable monthly.
             return Response({"status": "fully_signed", "message": "Lease finalized. Property is now occupied."})
             
         return Response({"status": "signed", "message": "Signature recorded. Waiting for the other party."})
+
+
+    @action(detail=False, methods=["post"])
+    def request_lease(self, request):
+        listing_id = request.data.get("listing_id")
+        if not listing_id:
+            return Response({"detail": "Listing ID required"}, status=400)
+            
+        from apps.properties.models import Listing
+        try:
+            listing = Listing.objects.get(id=listing_id)
+        except Listing.DoesNotExist:
+            return Response({"detail": "Listing not found"}, status=404)
+            
+        # Check if a lease already exists for this tenant and property
+        existing = Lease.objects.filter(
+            property=listing.property,
+            tenant_email__iexact=request.user.email
+        ).first()
+        
+        if existing:
+            return Response(self.get_serializer(existing).data)
+            
+        # Create a new lease draft
+        lease = Lease.objects.create(
+            landlord=listing.created_by,
+            property=listing.property,
+            tenant_name=request.user.first_name or request.user.email.split('@')[0],
+            tenant_phone=request.user.phone_number or "",
+            tenant_email=request.user.email,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=365), # Default 1 year
+            monthly_rent=listing.price,
+            deposit_paid=0,
+            status="ACTIVE"
+        )
+        
+        # Auto-generate the agreement text
+        lease.agreement_text = f"""
+RESIDENTIAL TENANCY AGREEMENT
+
+THIS AGREEMENT is made between:
+LANDLORD: {lease.landlord.email}
+TENANT: {lease.tenant_name} ({lease.tenant_email})
+
+PROPERTY: {lease.property.address_line or lease.property.neighbourhood.name}
+TERM: {lease.start_date} to {lease.end_date}
+RENT: ZMW {lease.monthly_rent} payable monthly.
+
+1. The Tenant agrees to pay rent on or before the due date.
+2. The Tenant shall keep the property in good condition.
+3. The Landlord shall ensure the property is habitable.
+4. This agreement is legally binding once signed by both parties digitally.
+        """.strip()
+        lease.save()
+        
+        return Response(self.get_serializer(lease).data, status=201)
 
     def perform_create(self, serializer):
         # When a lease is created, we automatically generate the first 12 rent records

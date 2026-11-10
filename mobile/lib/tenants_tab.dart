@@ -61,6 +61,7 @@ class _TenantsTabState extends State<TenantsTab> {
                   ],
                 ),
                 children: [
+                  // Lease Agreement button
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: SizedBox(
@@ -73,21 +74,24 @@ class _TenantsTabState extends State<TenantsTab> {
                       ),
                     ),
                   ),
+
+                  // Rent records
                   ...records.map((record) {
-                  final isPaid = record['status'] == 'PAID';
-                  return ListTile(
-                    leading: Icon(isPaid ? Icons.check_circle : Icons.pending_actions, color: isPaid ? Colors.green : Colors.orange),
-                    title: Text("Due: ${DateFormat('MMM yyyy').format(DateTime.parse(record['due_date']))}"),
-                    subtitle: Text("K ${record['amount']}"),
-                    trailing: isPaid 
-                      ? Text("Paid", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))
-                      : ElevatedButton(
-                          onPressed: () => _markPaid(lease['id'], record['id']),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-                          child: Text("Mark Paid"),
-                        ),
-                  );
-                }).toList(),
+                    final isPaid = record['status'] == 'PAID';
+                    return ListTile(
+                      leading: Icon(isPaid ? Icons.check_circle : Icons.pending_actions, color: isPaid ? Colors.green : Colors.orange),
+                      title: Text("Due: ${DateFormat('MMM yyyy').format(DateTime.parse(record['due_date']))}"),
+                      subtitle: Text("K ${record['amount']}"),
+                      trailing: isPaid
+                          ? Text("Paid", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))
+                          : ElevatedButton(
+                              onPressed: () => _markPaid(lease['id'], record['id']),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+                              child: Text("Mark Paid"),
+                            ),
+                    );
+                  }).toList(),
+                ],
               ),
             );
           },
