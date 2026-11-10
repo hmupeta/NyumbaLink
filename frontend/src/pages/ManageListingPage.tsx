@@ -30,12 +30,24 @@ export default function ManageListingPage() {
       <div className="grid md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-6">
           <div className="bg-white border rounded-lg overflow-hidden">
-            <div className="aspect-video bg-gray-100 flex items-center justify-center">
-              {listing.media[0] ? (
-                <img src={getMediaUrl(listing.media[0].file)} alt="Cover" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-gray-400">No image uploaded</span>
-              )}
+            {/* SCROLLABLE GALLERY */}
+            <div className="p-4 bg-gray-50 border-b">
+              <h3 className="text-sm font-semibold text-gray-600 mb-3">Property Gallery ({listing.media.filter(m => m.media_type === 'IMAGE').length} images)</h3>
+              <div className="flex gap-4 overflow-x-auto snap-x pb-2">
+                {listing.media.filter(m => m.media_type === 'IMAGE').map((m) => (
+                  <img 
+                    key={m.id}
+                    src={getMediaUrl(m.file)} 
+                    alt="Property" 
+                    className="h-48 w-auto object-cover rounded-lg shadow-sm border snap-start flex-shrink-0" 
+                  />
+                ))}
+                {listing.media.filter(m => m.media_type === 'IMAGE').length === 0 && (
+                  <div className="h-48 w-full bg-gray-200 rounded-lg flex items-center justify-center text-gray-400">
+                    No images uploaded
+                  </div>
+                )}
+              </div>
             </div>
             <div className="p-6">
               <div className="flex justify-between items-start mb-2">

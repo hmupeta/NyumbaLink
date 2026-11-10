@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
-import { listingsApi } from '../api/listings'
+import { listingsApi, getMediaUrl } from '../api/listings'
 import { useAuth } from '../auth/AuthContext'
 import Loading from '../components/Loading'
 import ErrorMessage from '../components/ErrorMessage'
@@ -132,7 +132,22 @@ export default function DashboardPage() {
                 <tbody className="divide-y">
                   {myListings.map(l => (
                     <tr key={l.id}>
-                      <td className="px-4 py-3 text-sm">{l.title}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex items-center gap-3">
+                          {l.media?.length > 0 && l.media[0].media_type === 'IMAGE' ? (
+                            <img 
+                              src={getMediaUrl(l.media[0].file)} 
+                              alt={l.title} 
+                              className="w-12 h-12 rounded object-cover shadow-sm border"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded bg-gray-100 border flex items-center justify-center text-xs text-gray-400">
+                              No Img
+                            </div>
+                          )}
+                          <span className="font-medium line-clamp-2">{l.title}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-sm">{l.currency} {Number(l.price).toLocaleString()}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${

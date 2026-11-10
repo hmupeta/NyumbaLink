@@ -70,6 +70,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: _loading ? CircularProgressIndicator(color: Colors.white) : Text("Login"),
                 ),
               ),
+              SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => MainLayout()),
+                  );
+                },
+                child: Text(
+                  "Continue Browsing as Guest",
+                  style: TextStyle(color: Colors.grey[700], fontSize: 16),
+                ),
+              ),
             ],
           ),
         ),
