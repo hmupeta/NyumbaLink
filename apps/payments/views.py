@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
 from apps.properties.models import Listing
-from .models import PaymentTransaction
+from apps.integrations.models import PaymentTransaction
 from .momo_service import initiate_momo_payment, check_momo_status
 import uuid
 
