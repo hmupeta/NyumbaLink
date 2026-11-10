@@ -14,6 +14,7 @@ export default function ManageListingPage() {
   })
 
   if (isLoading) return <Loading />
+  const images = listing?.media.filter((m) => m.media_type === 'IMAGE') || [];
   if (error || !listing) return <div className="p-8"><ErrorMessage message="Listing not found." /></div>
 
   return (
@@ -30,25 +31,60 @@ export default function ManageListingPage() {
       <div className="grid md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-6">
           <div className="bg-white border rounded-lg overflow-hidden">
-            {/* SCROLLABLE GALLERY */}
-            <div className="p-4 bg-gray-50 border-b">
-              <h3 className="text-sm font-semibold text-gray-600 mb-3">Property Gallery ({listing.media.filter(m => m.media_type === 'IMAGE').length} images)</h3>
-              <div className="flex gap-4 overflow-x-auto snap-x pb-2">
-                {listing.media.filter(m => m.media_type === 'IMAGE').map((m) => (
-                  <img 
+            {/* CAROUSEL */}
+            <div className="relative bg-black">
+              {images.length > 0 ? (
+                <>
+                  <div className="aspect-video w-full flex items-center justify-center">
+                    <img
+                      src={getMediaUrl(images[activeImageIndex].file)}
+                      alt="Property"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+
+                  {/* Prev/Next Arrows */}
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setActiveImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1)}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                      </button>
+                      <button
+                        onClick={() => setActiveImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </button>
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-medium">
+                        {activeImageIndex + 1} / {images.length}
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="aspect-video w-full flex items-center justify-center text-gray-400">
+                  No images uploaded
+                </div>
+              )}
+            </div>
+
+            {/* Thumbnail Strip */}
+            {images.length > 1 && (
+              <div className="flex gap-2 p-3 overflow-x-auto bg-gray-50 border-b">
+                {images.map((m, idx) => (
+                  <img
                     key={m.id}
-                    src={getMediaUrl(m.file)} 
-                    alt="Property" 
-                    className="h-48 w-auto object-cover rounded-lg shadow-sm border snap-start flex-shrink-0" 
+                    src={getMediaUrl(m.file)}
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={`w-16 h-16 object-cover rounded cursor-pointer border-2 transition ${idx === activeImageIndex ? 'border-emerald-500' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                    alt="Thumbnail"
                   />
                 ))}
-                {listing.media.filter(m => m.media_type === 'IMAGE').length === 0 && (
-                  <div className="h-48 w-full bg-gray-200 rounded-lg flex items-center justify-center text-gray-400">
-                    No images uploaded
-                  </div>
-                )}
               </div>
-            </div>
+            )}
             <div className="p-6">
               <div className="flex justify-between items-start mb-2">
                 <h1 className="text-2xl font-bold">{listing.title}</h1>
