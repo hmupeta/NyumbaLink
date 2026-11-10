@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { listingsApi, getMediaUrl } from '../api/listings'
 import Loading from '../components/Loading'
@@ -6,6 +7,7 @@ import ErrorMessage from '../components/ErrorMessage'
 
 export default function ManageListingPage() {
   const { id } = useParams<{ id: string }>()
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
   
   const { data: listing, isLoading, error } = useQuery({
     queryKey: ['manage-listing', id],

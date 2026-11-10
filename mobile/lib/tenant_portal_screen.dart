@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'api_client.dart';
+import 'lease_agreement_screen.dart';
 
 class TenantPortalScreen extends StatefulWidget {
   @override
@@ -146,6 +147,16 @@ class _TenantPortalScreenState extends State<TenantPortalScreen> {
                       }),
                       
                       SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LeaseAgreementScreen(leaseId: lease['id']))),
+                          icon: Icon(Icons.description),
+                          label: Text("View & Sign Lease Agreement"),
+                          style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF059669)),
+                        ),
+                      ),
+                      SizedBox(height: 8),
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'api_client.dart';
+import 'lease_agreement_screen.dart';
 
 class TenantsTab extends StatefulWidget {
   @override
@@ -59,7 +60,20 @@ class _TenantsTabState extends State<TenantsTab> {
                     )
                   ],
                 ),
-                children: records.map((record) {
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LeaseAgreementScreen(leaseId: lease['id']))),
+                        icon: Icon(Icons.description, color: Color(0xFF059669)),
+                        label: Text("Manage Lease Agreement", style: TextStyle(color: Color(0xFF059669))),
+                        style: OutlinedButton.styleFrom(side: BorderSide(color: Color(0xFF059669))),
+                      ),
+                    ),
+                  ),
+                  ...records.map((record) {
                   final isPaid = record['status'] == 'PAID';
                   return ListTile(
                     leading: Icon(isPaid ? Icons.check_circle : Icons.pending_actions, color: isPaid ? Colors.green : Colors.orange),

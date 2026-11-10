@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { leaseApi } from '../api/management'
 import { useAuth } from '../auth/AuthContext'
@@ -9,7 +8,6 @@ export default function LeaseAgreementPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const navigate = useNavigate()
 
   const { data: lease, isLoading } = useQuery({
     queryKey: ['lease', id],

@@ -474,6 +474,26 @@ class ApiClient {
     if (res.statusCode != 204) throw Exception('Failed to delete saved search');
   }
 
+
+  // --- Lease Agreements ---
+  static Future<Map<String, dynamic>> getLeaseDetails(String id) async {
+    final res = await http.get(Uri.parse('$baseUrl/leases/$id/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body);
+    throw Exception('Failed to load lease');
+  }
+
+  static Future<Map<String, dynamic>> generateLeaseAgreement(String id) async {
+    final res = await http.post(Uri.parse('$baseUrl/leases/$id/generate_agreement/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body);
+    throw Exception('Failed to generate agreement');
+  }
+
+  static Future<Map<String, dynamic>> signLease(String id) async {
+    final res = await http.post(Uri.parse('$baseUrl/leases/$id/sign/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body);
+    throw Exception('Failed to sign lease');
+  }
+
   // --- Saved Properties ---
   static Future<List<dynamic>> getSavedListings() async {
     final res = await http.get(Uri.parse('$baseUrl/saved-listings/'), headers: await getHeaders());
