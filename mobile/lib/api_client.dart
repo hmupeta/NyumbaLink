@@ -3,9 +3,19 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 
+import 'package:flutter/material.dart';
+
 class ApiClient {
+  static VoidCallback? onUnauthorized;
   static const String baseUrl = "https://nyumbalink-backend-eaw2.onrender.com/api/v1";
   
+  static void _checkResponse(int statusCode) {
+    if (statusCode == 401) {
+      onUnauthorized?.call();
+      throw Exception('Session expired');
+    }
+  }
+
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('access_token');
@@ -45,6 +55,7 @@ class ApiClient {
 
     final uri = Uri.parse('$baseUrl/listings/').replace(queryParameters: params);
     final res = await http.get(uri, headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load listings');
   }
@@ -55,6 +66,7 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'name': name}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200 || res.statusCode == 201) {
       return jsonDecode(res.body);
     }
@@ -64,7 +76,8 @@ class ApiClient {
   static Future<Map<String, dynamic>> getListingDetail(String id) async {
     try {
       final res = await http.get(Uri.parse('$baseUrl/listings/$id/'), headers: await getHeaders());
-      if (res.statusCode == 200) return jsonDecode(res.body);
+    _checkResponse(res.statusCode);
+    if (res.statusCode == 200) return jsonDecode(res.body);
       throw Exception('Server returned ${res.statusCode}: ${res.body}');
     } catch (e) {
       throw Exception('Network error: $e');
@@ -77,6 +90,7 @@ class ApiClient {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
       await setToken(data['access']);
@@ -91,6 +105,7 @@ class ApiClient {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password, 'first_name': firstName}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode == 201) {
       final data = jsonDecode(res.body);
       await setToken(data['access']);
@@ -102,12 +117,14 @@ class ApiClient {
   // --- Landlord Features ---
   static Future<List<dynamic>> getMyListings() async {
     final res = await http.get(Uri.parse('$baseUrl/listings/my_listings/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load your listings');
   }
 
   static Future<List<dynamic>> getNeighbourhoods() async {
     final res = await http.get(Uri.parse('$baseUrl/neighbourhoods/?page=1'));
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load locations');
   }
@@ -173,12 +190,21 @@ class ApiClient {
     }
   }
 
+  static Future<void> submitListing(String id) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/listings/$id/submit/'),
+      headers: await getHeaders(),
+    );
+    if (res.statusCode != 200) throw Exception('Failed to submit listing');
+  }
+
   static Future<void> updateListing(String id, Map<String, dynamic> data) async {
     final res = await http.patch(
       Uri.parse('$baseUrl/listings/$id/'),
       headers: await getHeaders(),
       body: jsonEncode(data),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 200) throw Exception('Failed to update listing');
   }
 
@@ -187,6 +213,7 @@ class ApiClient {
       Uri.parse('$baseUrl/listings/$id/'),
       headers: await getHeaders(),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 204) throw Exception('Failed to delete listing');
   }
 
@@ -194,12 +221,14 @@ class ApiClient {
   // --- Notifications ---
   static Future<int> getUnreadNotificationCount() async {
     final res = await http.get(Uri.parse('$baseUrl/notifications/unread_count/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['count'];
     return 0;
   }
 
   static Future<List<dynamic>> getNotifications() async {
     final res = await http.get(Uri.parse('$baseUrl/notifications/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load notifications');
   }
@@ -215,11 +244,13 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'listing': listingId, 'requested_date': dateIso, 'note': 'Requested via mobile app'}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 201) throw Exception('Failed to request viewing');
   }
 
   static Future<List<dynamic>> getViewingRequests() async {
     final res = await http.get(Uri.parse('$baseUrl/viewings/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
       return data['results'] ?? [];
@@ -233,6 +264,7 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'status': status}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 200) throw Exception('Failed to update status');
   }
 
@@ -268,6 +300,7 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'listing_id': listingId, 'provider': provider, 'phone_number': phone}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 200) {
       final error = jsonDecode(res.body)['detail'] ?? 'Failed to unlock';
       throw Exception(error);
@@ -281,6 +314,7 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'listing_id': listingId, 'amount': amount, 'type': type, 'phone_number': phone}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 200) {
       final error = jsonDecode(res.body)['detail'] ?? 'Payment failed';
       throw Exception(error);
@@ -289,6 +323,7 @@ class ApiClient {
 
   static Future<Map<String, dynamic>> getPaymentSettings() async {
     final res = await http.get(Uri.parse('$baseUrl/payment-settings/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Failed to load settings');
   }
@@ -299,6 +334,7 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode(data),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 200) throw Exception('Failed to update settings');
   }
 
@@ -306,6 +342,7 @@ class ApiClient {
   // --- KYC / Verification ---
   static Future<List<dynamic>> getVerificationCases() async {
     final res = await http.get(Uri.parse('$baseUrl/verifications/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load verifications');
   }
@@ -316,6 +353,7 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'verification_type': type}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode == 201) return jsonDecode(res.body);
     throw Exception('Failed to create verification case');
   }
@@ -332,6 +370,7 @@ class ApiClient {
     request.files.add(http.MultipartFile.fromBytes('file', fileBytes, filename: fileName));
     
     final response = await request.send();
+    _checkResponse(response.statusCode);
     if (response.statusCode != 201) throw Exception('Failed to upload document');
   }
 
@@ -339,6 +378,7 @@ class ApiClient {
   // --- Profiles & Reviews ---
   static Future<Map<String, dynamic>> getPublicProfile(String userId) async {
     final res = await http.get(Uri.parse('$baseUrl/profiles/$userId/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Failed to load profile');
   }
@@ -349,6 +389,7 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'rating': rating, 'comment': comment}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 201) {
       final error = jsonDecode(res.body);
       throw Exception(error.values.first[0] ?? 'Failed to submit review');
@@ -359,6 +400,7 @@ class ApiClient {
   // --- Management (Tenants & Leases) ---
   static Future<List<dynamic>> getLeases() async {
     final res = await http.get(Uri.parse('$baseUrl/leases/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load leases');
   }
@@ -368,11 +410,13 @@ class ApiClient {
       Uri.parse('$baseUrl/leases/$leaseId/rent-records/$recordId/mark_paid/'),
       headers: await getHeaders(),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 200) throw Exception('Failed to mark rent paid');
   }
 
   static Future<List<dynamic>> getMyTenancy() async {
     final res = await http.get(Uri.parse('$baseUrl/leases/my_tenancy/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Failed to load tenancy');
   }
@@ -383,12 +427,14 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode(data),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 201) throw Exception('Failed to log maintenance');
   }
 
   // --- Maintenance ---
   static Future<List<dynamic>> getMaintenanceRequests() async {
     final res = await http.get(Uri.parse('$baseUrl/maintenance/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load maintenance requests');
   }
@@ -399,12 +445,14 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'status': status}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 200) throw Exception('Failed to update maintenance status');
   }
 
   // --- Saved Properties ---
   static Future<List<dynamic>> getSavedListings() async {
     final res = await http.get(Uri.parse('$baseUrl/saved-listings/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load saved listings');
   }
@@ -424,6 +472,7 @@ class ApiClient {
   // --- Messaging ---
   static Future<List<dynamic>> getConversations() async {
     final res = await http.get(Uri.parse('$baseUrl/conversations/'), headers: await getHeaders());
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load conversations');
   }
@@ -434,6 +483,7 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'listing_id': listingId}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['id'];
     throw Exception('Failed to start chat');
   }
@@ -443,6 +493,7 @@ class ApiClient {
       Uri.parse('$baseUrl/conversations/$conversationId/messages/'),
       headers: await getHeaders(),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body)['results'];
     throw Exception('Failed to load messages');
   }
@@ -453,6 +504,7 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'body': body}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 201) throw Exception('Failed to send message');
   }
 
@@ -470,6 +522,7 @@ class ApiClient {
       contentType: type == 'AUDIO' ? MediaType('audio', 'mp4') : null,
     ));
     final response = await request.send();
+    _checkResponse(response.statusCode);
     if (response.statusCode != 201) throw Exception('Failed to send file');
   }
 
@@ -479,6 +532,7 @@ class ApiClient {
       headers: await getHeaders(),
       body: jsonEncode({'emoji': emoji}),
     );
+    _checkResponse(res.statusCode);
     if (res.statusCode != 200) throw Exception('Failed to react');
   }
 }

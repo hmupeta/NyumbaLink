@@ -17,6 +17,10 @@ export interface ListingFilters {
 export const listingsApi = {
   list: (filters: ListingFilters = {}) => {
     const params = new URLSearchParams()
+    
+    // FORCE PUBLIC LISTINGS TO ONLY SHOW PUBLISHED
+    params.append('status', 'PUBLISHED')
+
     Object.entries(filters).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== '') params.append(k, String(v))
     })

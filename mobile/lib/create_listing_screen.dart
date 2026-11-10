@@ -37,38 +37,53 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please select a cover image")));
       return;
     }
-    if (_neighbourhoodCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter a neighbourhood")));
+    if (_titleCtrl.text.trim().isEmpty || _neighbourhoodCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter a title and neighbourhood")));
+      return;
+    }
+
+    // Safely parse numeric fields
+    final price = double.tryParse(_priceCtrl.text);
+    final beds = int.tryParse(_bedCtrl.text);
+    final baths = int.tryParse(_bathCtrl.text);
+    final area = double.tryParse(_areaCtrl.text);
+
+    if (price == null || beds == null || baths == null || area == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Please enter valid numbers for Price, Beds, Baths, and Area"),
+        backgroundColor: Colors.red,
+      ));
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      // 1. Check if the neighbourhood exists, if not, create it.
-      // We send the name to the backend, and it returns the ID (creating it if necessary).
+      // 1. Create/Get Neighbourhood
       final hoodData = await ApiClient.createNeighbourhood(_neighbourhoodCtrl.text.trim());
       final String neighbourhoodId = hoodData['id'];
 
-      // 2. Create the Property & Listing
+      // 2. Create Property & Listing
       await ApiClient.createPropertyAndListing(
-        title: _titleCtrl.text,
-        description: _descCtrl.text,
-        price: double.parse(_priceCtrl.text),
-        bedrooms: int.parse(_bedCtrl.text),
-        bathrooms: int.parse(_bathCtrl.text),
-        floorArea: double.parse(_areaCtrl.text),
+        title: _titleCtrl.text.trim(),
+        description: _descCtrl.text.trim(),
+        price: price,
+        bedrooms: beds,
+        bathrooms: baths,
+        floorArea: area,
         propertyType: _propertyType,
         neighbourhoodId: neighbourhoodId,
         imageBytes: _imageBytes!,
         imageName: _imageName!,
       );
       
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Property Listed Successfully!")));
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Property Listed Successfully!")));
+        Navigator.pop(context);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override

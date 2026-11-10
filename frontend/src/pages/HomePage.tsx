@@ -71,6 +71,8 @@ export default function HomePage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['listings', filters],
     queryFn: () => listingsApi.list(filters),
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   useEffect(() => {

@@ -40,6 +40,19 @@ class _ManageListingScreenState extends State<ManageListingScreen> {
     return 'https://nyumbalink-backend-eaw2.onrender.com$url';
   }
 
+  void _submitForReview() async {
+    setState(() => _isLoading = true);
+    try {
+      await ApiClient.submitListing(widget.listingId);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Listing submitted for review!")));
+      widget.onUpdate(); // Refresh the dashboard
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to submit listing")));
+      setState(() => _isLoading = false);
+    }
+  }
+
   void _saveChanges() async {
     setState(() => _isLoading = true);
     try {
@@ -161,6 +174,20 @@ class _ManageListingScreenState extends State<ManageListingScreen> {
                     SizedBox(height: 32),
 
                     // Actions
+                    // Submit for Review button (only if DRAFT)
+                    if (status == 'DRAFT') ...[
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _submitForReview,
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700]),
+                          child: Text("Submit for Review"),
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                    ],
+
                     SizedBox(
                       width: double.infinity,
                       height: 50,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'auth_provider.dart';
+import 'main_layout.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -17,9 +18,17 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await Provider.of<AuthProvider>(context, listen: false).login(_emailCtrl.text, _passCtrl.text);
       
-      // FIX: Just pop the login screen. The MainLayout is underneath!
+      // FIX: Check if we can pop. If not (because we were pushed as root by the 401 handler),
+      // we must push the MainLayout instead.
       if (mounted) {
-        Navigator.pop(context);
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => MainLayout()),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
