@@ -102,21 +102,31 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF059669)),
                 child: Text("Start Verification"),
               )
-            else if (status == 'REJECTED')
-              Text("Rejected: ${existingCase['rejection_reason']}", style: TextStyle(color: Colors.red))
-            else if (status == 'PENDING' || status == 'APPROVED')
+            else
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Uploaded Documents:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  SizedBox(height: 8),
-                  ...docs.map((d) => Text("• ${d['document_type']} (Uploaded)", style: TextStyle(color: Colors.green[700]))),
-                  SizedBox(height: 12),
+                  // Show rejection message if applicable
+                  if (status == 'REJECTED')
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text("Rejected: ${existingCase['rejection_reason']}", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    ),
+
+                  if (docs.isNotEmpty) ...[
+                    Text("Uploaded Documents:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    SizedBox(height: 8),
+                    ...docs.map((d) => Text("• ${d['document_type']} (Uploaded)", style: TextStyle(color: Colors.green[700]))),
+                    SizedBox(height: 12),
+                  ],
+
+                  // Allow upload if pending or rejected
                   if (status != 'APPROVED')
                     OutlinedButton.icon(
                       onPressed: _isProcessing ? null : () => _uploadDoc(existingCase['id']),
                       icon: Icon(Icons.upload_file),
-                      label: Text("Upload Document"),
+                      label: Text(status == 'REJECTED' ? "Re-upload Document" : "Upload Document"),
+                      style: OutlinedButton.styleFrom(side: BorderSide(color: Color(0xFF059669)), foregroundColor: Color(0xFF059669)),
                     )
                 ],
               )

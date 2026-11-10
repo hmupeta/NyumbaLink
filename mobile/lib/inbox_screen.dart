@@ -24,7 +24,7 @@ class _InboxScreenState extends State<InboxScreen> {
         future: _convsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text("Error loading inbox. Please log in."));
+          if (snapshot.hasError) return Center(child: Padding(padding: EdgeInsets.all(24), child: Text("Please log in to view your inbox.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))));
           
           final convs = snapshot.data!;
           if (convs.isEmpty) return Center(child: Text("No messages yet."));

@@ -449,6 +449,31 @@ class ApiClient {
     if (res.statusCode != 200) throw Exception('Failed to update maintenance status');
   }
 
+
+  // --- Saved Searches ---
+  static Future<List<dynamic>> getSavedSearches() async {
+    final res = await http.get(Uri.parse('$baseUrl/saved-searches/'), headers: await getHeaders());
+    if (res.statusCode == 200) return jsonDecode(res.body)['results'];
+    throw Exception('Failed to load saved searches');
+  }
+
+  static Future<void> createSavedSearch(Map<String, dynamic> data) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/saved-searches/'),
+      headers: await getHeaders(),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode != 201) throw Exception('Failed to save search');
+  }
+
+  static Future<void> deleteSavedSearch(String id) async {
+    final res = await http.delete(
+      Uri.parse('$baseUrl/saved-searches/$id/'),
+      headers: await getHeaders(),
+    );
+    if (res.statusCode != 204) throw Exception('Failed to delete saved search');
+  }
+
   // --- Saved Properties ---
   static Future<List<dynamic>> getSavedListings() async {
     final res = await http.get(Uri.parse('$baseUrl/saved-listings/'), headers: await getHeaders());

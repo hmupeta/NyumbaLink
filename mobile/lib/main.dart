@@ -14,19 +14,25 @@ void main() {
   ApiClient.onUnauthorized = () {
     final context = navigatorKey.currentContext;
     if (context != null) {
-      Provider.of<AuthProvider>(context, listen: false).logout();
+      final auth = Provider.of<AuthProvider>(context, listen: false);
       
-      scaffoldMessengerKey.currentState?.showSnackBar(
-        SnackBar(
-          content: Text("Session expired. Please log in again."),
-          backgroundColor: Colors.red,
-        )
-      );
-      
-      navigatorKey.currentState?.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => LoginScreen()),
-        (Route<dynamic> route) => false,
-      );
+      // ONLY trigger the session expired redirect if the user was previously logged in.
+      // If they are a guest, 401s are expected for protected endpoints.
+      if (auth.user != null) {
+        auth.logout();
+        
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text("Session expired. Please log in again."),
+            backgroundColor: Colors.red,
+          )
+        );
+        
+        navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => LoginScreen()),
+          (Route<dynamic> route) => false,
+        );
+      }
     }
   };
 

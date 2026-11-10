@@ -69,3 +69,9 @@ class VerificationDocumentViewSet(viewsets.ModelViewSet):
         case_id = self.kwargs.get("case_pk")
         case = VerificationCase.objects.get(id=case_id, user=self.request.user)
         serializer.save(case=case)
+        
+        # If they were rejected and are uploading a new document, put them back in the queue
+        if case.status == "REJECTED":
+            case.status = "PENDING"
+            case.rejection_reason = ""
+            case.save()

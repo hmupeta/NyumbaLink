@@ -5,6 +5,8 @@ import 'api_client.dart';
 import 'auth_provider.dart';
 import 'listing_detail_screen.dart';
 import 'notifications_screen.dart';
+import 'saved_searches_screen.dart';
+import 'map_view.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -14,21 +16,25 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<dynamic>> _listings;
   final _searchController = TextEditingController();
+  final _priceController = TextEditingController();
   int _unreadCount = 0;
+  bool _isMapView = false;
 
-  // Filter State
   String? _transactionType;
   String? _propertyType;
   int? _minBedrooms;
   double? _maxPrice;
-  
-  final _priceController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _fetchListings();
-    _fetchNotifications();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.user != null) {
+        _fetchNotifications();
+      }
+    });
   }
 
   void _fetchListings() {
@@ -90,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   SizedBox(height: 16),
-                  
                   Text("Transaction Type", style: TextStyle(fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
                   Row(
@@ -101,7 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   SizedBox(height: 16),
-
                   Text("Property Type", style: TextStyle(fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -112,7 +116,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     onChanged: (val) => setModalState(() => _propertyType = val),
                   ),
                   SizedBox(height: 16),
-
                   Text("Min Bedrooms", style: TextStyle(fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
                   Row(
@@ -124,7 +127,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     }).toList(),
                   ),
                   SizedBox(height: 16),
-
                   Text("Max Price (ZMW)", style: TextStyle(fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
                   TextField(
@@ -136,18 +138,59 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                   SizedBox(height: 24),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _fetchListings();
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF059669)),
-                      child: Text("Apply Filters"),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            final nameCtrl = TextEditingController(text: _searchController.text.isEmpty ? "My Search" : _searchController.text);
+                            String? saveName = await showDialog<String>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text("Name your search"),
+                                content: TextField(controller: nameCtrl, decoration: InputDecoration(hintText: "e.g. Houses in Kabulonga")),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
+                                  ElevatedButton(onPressed: () => Navigator.pop(context, nameCtrl.text), child: Text("Save"))
+                                ],
+                              ),
+                            );
+                            if (saveName != null) {
+                              try {
+                                await ApiClient.createSavedSearch({
+                                  'name': saveName,
+                                  'query': _searchController.text,
+                                  'transaction_type': _transactionType ?? '',
+                                  'property_type': _propertyType ?? '',
+                                  'min_bedrooms': _minBedrooms,
+                                  'max_price': _maxPrice,
+                                });
+                                if (mounted) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Search saved!")));
+                                }
+                              } catch (e) {
+                                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to save")));
+                              }
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(side: BorderSide(color: Color(0xFF059669)), minimumSize: Size(0, 50)),
+                          child: Text("Save", style: TextStyle(color: Color(0xFF059669))),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _fetchListings();
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF059669), minimumSize: Size(0, 50)),
+                          child: Text("Apply Filters"),
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: 16),
                 ],
@@ -183,6 +226,27 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Color(0xFF059669),
         automaticallyImplyLeading: false,
         actions: [
+          IconButton(
+            icon: Icon(Icons.bookmark),
+            tooltip: "Saved Searches",
+            onPressed: () async {
+              final savedSearch = await Navigator.push<dynamic>(
+                context,
+                MaterialPageRoute(builder: (_) => SavedSearchesScreen()),
+              );
+              if (savedSearch != null) {
+                setState(() {
+                  _searchController.text = savedSearch['query'] ?? '';
+                  _transactionType = savedSearch['transaction_type'];
+                  _propertyType = savedSearch['property_type'];
+                  _minBedrooms = savedSearch['min_bedrooms'];
+                  _maxPrice = savedSearch['max_price'] != null ? double.parse(savedSearch['max_price'].toString()) : null;
+                  _priceController.text = _maxPrice?.toString() ?? '';
+                });
+                _fetchListings();
+              }
+            },
+          ),
           Stack(
             children: [
               IconButton(
@@ -245,44 +309,63 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
           if (snapshot.hasError) return Center(child: Text("Error loading listings"));
-          
-          final listings = snapshot.data!;
-          if (listings.isEmpty) return Center(child: Text("No properties found. Try clearing filters."));
 
-          return ListView.builder(
-            itemCount: listings.length,
-            itemBuilder: (context, index) {
-              final l = listings[index];
-              final imageUrl = l['media'].isNotEmpty ? l['media'][0]['file'] : null;
-              
-              return GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingDetailScreen(listingId: l['id']))),
-                child: Card(
-                  margin: EdgeInsets.all(8),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (imageUrl != null)
-                        CachedNetworkImage(imageUrl: _getFullImageUrl(imageUrl), height: 200, width: double.infinity, fit: BoxFit.cover),
-                      Padding(
-                        padding: EdgeInsets.all(12),
+          final listings = snapshot.data!;
+          if (listings.isEmpty) return Center(child: Text("No properties found."));
+
+          return Stack(
+            children: [
+              if (_isMapView)
+                MapView(listings: listings)
+              else
+                ListView.builder(
+                  itemCount: listings.length,
+                  itemBuilder: (context, index) {
+                    final l = listings[index];
+                    final imageUrl = l['media'].isNotEmpty ? l['media'][0]['file'] : null;
+
+                    return GestureDetector(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingDetailScreen(listingId: l['id']))),
+                      child: Card(
+                        margin: EdgeInsets.all(8),
+                        clipBehavior: Clip.antiAlias,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(l['title'], style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            SizedBox(height: 4),
-                            Text("${l['property_summary']['neighbourhood']} · ${l['property_summary']['property_type']}", style: TextStyle(color: Colors.grey)),
-                            SizedBox(height: 8),
-                            Text("${l['currency']} ${l['price']}", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+                            if (imageUrl != null)
+                              CachedNetworkImage(imageUrl: _getFullImageUrl(imageUrl), height: 200, width: double.infinity, fit: BoxFit.cover),
+                            Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(l['title'], style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                  SizedBox(height: 4),
+                                  Text("${l['property_summary']['neighbourhood']} · ${l['property_summary']['property_type']}", style: TextStyle(color: Colors.grey)),
+                                  SizedBox(height: 8),
+                                  Text("${l['currency']} ${l['price']}", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
+              Positioned(
+                bottom: 24,
+                right: 24,
+                child: FloatingActionButton.extended(
+                  onPressed: () {
+                    setState(() => _isMapView = !_isMapView);
+                  },
+                  backgroundColor: Colors.white,
+                  icon: Icon(_isMapView ? Icons.list : Icons.map, color: Color(0xFF059669)),
+                  label: Text(_isMapView ? "List View" : "Map View", style: TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
           );
         },
       ),

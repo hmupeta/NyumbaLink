@@ -30,7 +30,7 @@ class _SavedScreenState extends State<SavedScreen> {
         future: _savedFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text("Error loading saved properties. Please log in."));
+          if (snapshot.hasError) return Center(child: Padding(padding: EdgeInsets.all(24), child: Text("Please log in to view your saved properties.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))));
           
           final savedItems = snapshot.data!;
           if (savedItems.isEmpty) return Center(child: Text("No saved properties yet."));
