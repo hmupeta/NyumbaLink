@@ -70,10 +70,20 @@ export default function TenantsList() {
                       <p className="font-bold text-sm mt-1">K {Number(record.amount).toLocaleString()}</p>
                       
                       {record.status === 'PAID' ? (
-                        <p className="text-xs text-green-700 font-medium mt-2 flex items-center gap-1">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                          Paid
-                        </p>
+                        <div className="mt-2 flex flex-col gap-1">
+                          <p className="text-xs text-green-700 font-medium flex items-center gap-1">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Paid
+                          </p>
+                          <a
+                            href={`https://nyumbalink-backend-eaw2.onrender.com/api/v1/leases/${lease.id}/rent-records/${record.id}/download_invoice/`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            Download Receipt
+                          </a>
+                        </div>
                       ) : (
                         <button 
                           onClick={() => setPayingRecord(record)}

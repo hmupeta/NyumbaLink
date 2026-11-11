@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'api_client.dart';
 import 'auth_provider.dart';
 
@@ -150,7 +151,7 @@ class _LeaseAgreementScreenState extends State<LeaseAgreementScreen> {
                   ),
                   SizedBox(height: 24),
 
-                  if (bothSigned)
+                  if (bothSigned) ...[
                     Container(
                       padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(color: Colors.green[50], border: Border.all(color: Colors.green), borderRadius: BorderRadius.circular(8)),
@@ -161,7 +162,22 @@ class _LeaseAgreementScreenState extends State<LeaseAgreementScreen> {
                           Expanded(child: Text("Contract Finalized. Property is now marked as OCCUPIED.", style: TextStyle(color: Colors.green[800], fontWeight: FontWeight.bold))),
                         ],
                       ),
-                    )
+                    ),
+                    SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final url = Uri.parse('https://nyumbalink-backend-eaw2.onrender.com/api/v1/leases/${widget.leaseId}/download_pdf/');
+                          if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+                        },
+                        icon: Icon(Icons.download),
+                        label: Text("Download Signed PDF"),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
+                      ),
+                    ),
+                  ]
                   else if (isLandlord || isTenant)
                     Column(
                       children: [
