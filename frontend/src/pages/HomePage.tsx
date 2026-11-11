@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Helmet } from 'react-helmet-async'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { listingsApi, type ListingFilters, getMediaUrl } from '../api/listings'
+import { listingsApi, type ListingFilters } from '../api/listings'
 import { locationsApi } from '../api/locations'
 import { heroApi } from '../api/hero'
 import SearchBar from '../components/SearchBar'
@@ -17,48 +16,12 @@ import TopNeighbourhoods from '../components/TopNeighbourhoods'
 export default function HomePage() {
   const [searchParams] = useSearchParams()
   const [filters, setFilters] = useState<ListingFilters>({})
-
-  // Sync URL params with filters
-  useEffect(() => {
-    const typeParam = searchParams.get('type');
-    const newType = typeParam === 'sale' ? 'SALE' : typeParam === 'rent' ? 'RENT' : undefined;
-    
-    const hoodParam = searchParams.get('neighbourhood');
-    
-    // Only update if things actually changed
-    setFilters(prev => {
-      let changed = false;
-      const next = { ...prev };
-      
-      if (prev.transaction_type !== newType) {
-        next.transaction_type = newType;
-        changed = true;
-      }
-      if (hoodParam && prev.neighbourhood !== hoodParam) {
-        next.neighbourhood = hoodParam;
-        changed = true;
-      }
-      
-      return changed ? next : prev;
-    });
-  }, [searchParams]);
-
-  // Scroll to listings when the URL changes
-  useEffect(() => {
-    if (searchParams.get('type')) {
-      setTimeout(() => {
-        const element = document.getElementById('listings-section');
-        if (element) {
-          const y = element.getBoundingClientRect().top + window.scrollY - 80; // 80px offset for sticky header
-          window.scrollTo({ top: y, behavior: 'smooth' });
-        }
-      }, 100);
-    }
-  }, [searchParams]);
   const [showFilters, setShowFilters] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
-  const [affordableFilter, setAffordableFilter] = useState<{ price: number, type: 'SALE' | 'RENT' } | null>(null)
   const [currentSlide, setCurrentSlide] = useState(0)
+  
+  // Affordability filter state
+  const [affordableFilter, setAffordableFilter] = useState<{ price: number, type: 'SALE' | 'RENT' } | null>(null)
 
   const { data: heroData } = useQuery({ queryKey: ['hero-images'], queryFn: heroApi.list })
   const { data: provinces } = useQuery({ queryKey: ['provinces'], queryFn: locationsApi.getProvinces })
@@ -81,9 +44,50 @@ export default function HomePage() {
     return () => clearInterval(interval)
   }, [heroData])
 
+  // Sync URL params with filters
   useEffect(() => {
-    if (affordableBudget) setFilters(prev => ({ ...prev, max_price: affordableBudget }))
-  }, [affordableBudget])
+    const typeParam = searchParams.get('type');
+    const newType = typeParam === 'sale' ? 'SALE' : typeParam === 'rent' ? 'RENT' : undefined;
+    const hoodParam = searchParams.get('neighbourhood');
+    
+    setFilters(prev => {
+      let changed = false;
+      const next = { ...prev };
+      if (prev.transaction_type !== newType) {
+        next.transaction_type = newType;
+        changed = true;
+      }
+      if (hoodParam && prev.neighbourhood !== hoodParam) {
+        next.neighbourhood = hoodParam;
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [searchParams]);
+
+  // Sync affordability filter with filters
+  useEffect(() => {
+    if (affordableFilter) {
+      setFilters(prev => ({
+        ...prev,
+        max_price: affordableFilter.price,
+        transaction_type: affordableFilter.type,
+      }))
+    }
+  }, [affordableFilter])
+
+  // Scroll to listings when URL changes
+  useEffect(() => {
+    if (searchParams.get('type')) {
+      setTimeout(() => {
+        const element = document.getElementById('listings-section');
+        if (element) {
+          const y = element.getBoundingClientRect().top + window.scrollY - 80;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [searchParams]);
 
   const updateFilter = (key: keyof ListingFilters, value: any) => {
     setFilters(prev => {
@@ -97,11 +101,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Helmet>
-        <title>NyumbaLink | Find your place in Zambia</title>
-        <meta name="description" content="The most trusted property marketplace in Zambia. Find houses, apartments, and land for rent or sale in Lusaka and beyond." />
-        <meta name="keywords" content="Zambia property, houses for rent Lusaka, buy house Zambia, NyumbaLink" />
-      </Helmet>
       
       {/* HERO SECTION */}
       <div className={`transition-all duration-500 ${viewMode === 'map' ? 'h-40' : 'h-[450px]'}`}>
@@ -109,7 +108,7 @@ export default function HomePage() {
           <div className="relative w-full h-full overflow-hidden bg-gray-900">
             {heroData?.results.map((hero: any, idx: number) => (
               <div key={hero.id} className={`absolute inset-0 transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
-                <img src={getMediaUrl(hero.image)} className="w-full h-full object-cover" alt={hero.title} />
+                <img src={`https://nyumbalink-backend-eaw2.onrender.com${hero.image}`} className="w-full h-full object-cover" alt={hero.title} />
                 <div className="absolute inset-0 bg-black/40" />
               </div>
             ))}
@@ -121,7 +120,6 @@ export default function HomePage() {
               )}
               
               <div className="w-full max-w-3xl bg-white p-2 rounded-xl shadow-2xl">
-                {/* HERO TABS */}
                 <div className="flex border-b mb-2">
                   <button 
                     onClick={() => updateFilter('transaction_type', 'RENT')}
@@ -157,20 +155,19 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* INTENT CARDS (Buy / Rent / Sell) */}
+      {/* TOP NEIGHBOURHOODS */}
       <TopNeighbourhoods />
 
-      {/* ZILLOW FEATURES (Recommendations & Calculator) */}
+      {/* AFFORDABILITY CALCULATOR */}
       <RecommendationsSection />
       <AffordabilityCalculator 
         onFilterUpdate={(price, type) => setAffordableFilter(price && type ? { price, type } : null)} 
         listings={data?.results || []} 
       />
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 max-w-[1400px] w-full mx-auto px-4 py-8">
+      {/* LISTINGS SECTION */}
+      <div id="listings-section" className="flex-1 max-w-[1400px] w-full mx-auto px-4 py-8">
         
-        {/* TOOLBAR */}
         <div className="flex flex-wrap justify-between items-center gap-4 mb-6 border-b pb-4">
           <h2 className="text-2xl font-bold text-gray-900">
             {filters.transaction_type === 'SALE' ? 'Homes for Sale' : filters.transaction_type === 'RENT' ? 'Homes for Rent' : 'All Properties'}
