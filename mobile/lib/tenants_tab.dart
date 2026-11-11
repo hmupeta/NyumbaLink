@@ -84,11 +84,24 @@ class _TenantsTabState extends State<TenantsTab> {
                       subtitle: Text("K ${record['amount']}"),
                       trailing: isPaid
                           ? Text("Paid", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))
-                          : ElevatedButton(
-                              onPressed: () => _markPaid(lease['id'], record['id']),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-                              child: Text("Mark Paid"),
-                            ),
+                          : record['status'] == 'OVERDUE'
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text("OVERDUE", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10)),
+                                  SizedBox(height: 4),
+                                  ElevatedButton(
+                                    onPressed: () => _markPaid(lease['id'], record['id']),
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], minimumSize: Size(0, 30)),
+                                    child: Text("Pay Now", style: TextStyle(fontSize: 12)),
+                                  ),
+                                ],
+                              )
+                            : ElevatedButton(
+                                onPressed: () => _markPaid(lease['id'], record['id']),
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+                                child: Text("Mark Paid"),
+                              ),
                     );
                   }).toList(),
                 ],

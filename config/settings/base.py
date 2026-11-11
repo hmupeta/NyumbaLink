@@ -178,3 +178,13 @@ LOGGING = {
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "alerts@nyumbalink.com"
+
+# ----------------------------------------------------------------
+# CELERY SCHEDULE (Daily Rent Alerts)
+# ----------------------------------------------------------------
+CELERY_BEAT_SCHEDULE = {
+    'check-rent-due-dates-every-day': {
+        'task': 'apps.management.tasks.check_rent_due_dates',
+        'schedule': 86400.0,  # Every 24 hours
+    },
+}
