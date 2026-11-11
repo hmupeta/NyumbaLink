@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { managementApi } from '../api/management'
+import MomoPaymentModal from '../components/MomoPaymentModal'
 import Loading from '../components/Loading'
 
 export default function TenantsList() {
   const queryClient = useQueryClient()
   const [expandedLease, setExpandedLease] = useState<string | null>(null)
+  const [payingRecord, setPayingRecord] = useState<any>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['leases'],
@@ -74,10 +76,10 @@ export default function TenantsList() {
                         </p>
                       ) : (
                         <button 
-                          onClick={() => markPaidMutation.mutate({ leaseId: lease.id, recordId: record.id })}
-                          className="mt-2 text-xs bg-gray-900 text-white px-2 py-1 rounded hover:bg-black w-full"
+                          onClick={() => setPayingRecord(record)}
+                          className="mt-2 text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 w-full"
                         >
-                          Mark Paid
+                          Pay Rent via MTN
                         </button>
                       )}
                     </div>
@@ -89,5 +91,18 @@ export default function TenantsList() {
         )
       })}
     </div>
+    
+    {payingRecord && (
+      <MomoPaymentModal
+        rentRecordId={payingRecord.id}
+        amount={Number(payingRecord.amount)}
+        onSuccess={() => {
+          setPayingRecord(null);
+          window.location.reload();
+        }}
+        onClose={() => setPayingRecord(null)}
+      />
+    )}
+  </div>
   )
 }

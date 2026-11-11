@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'api_client.dart';
+import 'momo_payment_modal.dart';
 import 'lease_agreement_screen.dart';
 
 class TenantPortalScreen extends StatefulWidget {
@@ -136,13 +137,29 @@ class _TenantPortalScreenState extends State<TenantPortalScreen> {
                           leading: Icon(isPaid ? Icons.check_circle : Icons.schedule, color: isPaid ? Colors.green : Colors.orange),
                           title: Text(DateFormat('MMM yyyy').format(DateTime.parse(r['due_date']))),
                           subtitle: Text("K${r['amount']}"),
-                          trailing: Text(
-                            isPaid ? "Paid" : "Due",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isPaid ? Colors.green : Colors.orange,
+                          trailing: isPaid 
+                          ? Text("Paid", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green))
+                          : TextButton(
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  builder: (context) => MomoPaymentModal(
+                                    rentRecordId: r['id'],
+                                    amount: double.parse(r['amount'].toString()),
+                                    onSuccess: () {
+                                      Navigator.pop(context);
+                                      _loadViewings(); // refresh schedule
+                                    },
+                                    onClose: () {
+                                      Navigator.pop(context);
+                                      _loadViewings();
+                                    },
+                                  ),
+                                );
+                              },
+                              child: Text("Pay Now", style: TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold)),
                             ),
-                          ),
                         );
                       }),
                       
