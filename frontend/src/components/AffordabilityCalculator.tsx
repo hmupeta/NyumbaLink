@@ -3,11 +3,10 @@ import { Link } from 'react-router-dom'
 import { getMediaUrl } from '../api/listings'
 
 interface Props {
-  onFilterUpdate: (maxPrice: number | undefined, type: 'SALE' | 'RENT' | undefined) => void
   listings: any[]
 }
 
-export default function AffordabilityCalculator({ onFilterUpdate, listings }: Props) {
+export default function AffordabilityCalculator({ listings }: Props) {
   const [mode, setMode] = useState<'SALE' | 'RENT'>('SALE')
   
   const [income, setIncome] = useState(25000)
@@ -34,11 +33,9 @@ export default function AffordabilityCalculator({ onFilterUpdate, listings }: Pr
 
       const price = loanAmount + downPayment
       setMaxHomePrice(Math.round(price))
-      onFilterUpdate(Math.round(price), 'SALE')
     } else {
-      onFilterUpdate(Math.round(maxMonthlyRent), 'RENT')
     }
-  }, [mode, income, downPayment, interestRate, termYears, onFilterUpdate, maxMonthlyRent])
+  }, [mode, income, downPayment, interestRate, termYears])
 
   // Filter listings strictly by the current mode (SALE vs RENT)
   const affordableListings = listings.filter(l => {

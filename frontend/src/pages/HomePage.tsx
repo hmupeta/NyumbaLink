@@ -21,7 +21,6 @@ export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0)
   
   // Affordability filter state
-  const [affordableFilter, setAffordableFilter] = useState<{ price: number, type: 'SALE' | 'RENT' } | null>(null)
 
   const { data: heroData } = useQuery({ queryKey: ['hero-images'], queryFn: heroApi.list })
   const { data: provinces } = useQuery({ queryKey: ['provinces'], queryFn: locationsApi.getProvinces })
@@ -65,16 +64,7 @@ export default function HomePage() {
     });
   }, [searchParams]);
 
-  // Sync affordability filter with filters
-  useEffect(() => {
-    if (affordableFilter) {
-      setFilters(prev => ({
-        ...prev,
-        max_price: affordableFilter.price,
-        transaction_type: affordableFilter.type,
-      }))
-    }
-  }, [affordableFilter])
+
 
   // Scroll to listings when URL changes
   useEffect(() => {
@@ -160,10 +150,7 @@ export default function HomePage() {
 
       {/* AFFORDABILITY CALCULATOR */}
       <RecommendationsSection />
-      <AffordabilityCalculator 
-        onFilterUpdate={(price, type) => setAffordableFilter(price && type ? { price, type } : null)} 
-        listings={data?.results || []} 
-      />
+      <AffordabilityCalculator listings={data?.results || []} />
 
       {/* LISTINGS SECTION */}
       <div id="listings-section" className="flex-1 max-w-[1400px] w-full mx-auto px-4 py-8">
