@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
 from apps.properties.models import Listing
+from apps.management.models import RentRecord
 from apps.integrations.models import PaymentTransaction
 from .momo_service import initiate_momo_payment, check_momo_status
 import uuid
@@ -10,33 +11,47 @@ import uuid
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def initiate_payment(request):
+    rent_record_id = request.data.get('rent_record_id')
     listing_id = request.data.get('listing_id')
     amount = request.data.get('amount')
     phone = request.data.get('phone_number')
     
-    if not all([listing_id, amount, phone]):
+    if not all([amount, phone]):
         return Response({"error": "Missing required fields"}, status=400)
-    
-    try:
-        listing = Listing.objects.get(id=listing_id)
-        landlord = listing.created_by # The payment goes to the landlord!
-    except Listing.DoesNotExist:
-        return Response({"error": "Listing not found"}, status=404)
+
+    landlord = None
+    metadata = {'tenant_phone': phone, 'initiated_by': request.user.email}
+
+    if rent_record_id:
+        try:
+            record = RentRecord.objects.get(id=rent_record_id)
+            landlord = record.lease.landlord
+            metadata['rent_record_id'] = str(record.id)
+            # Use the exact amount from the record to prevent tampering
+            amount = record.amount 
+        except RentRecord.DoesNotExist:
+            return Response({"error": "Rent record not found"}, status=404)
+    elif listing_id:
+        try:
+            listing = Listing.objects.get(id=listing_id)
+            landlord = listing.created_by
+            metadata['listing_id'] = str(listing.id)
+        except Listing.DoesNotExist:
+            return Response({"error": "Listing not found"}, status=404)
+    else:
+        return Response({"error": "Either rent_record_id or listing_id is required"}, status=400)
 
     reference = f"NYL-{uuid.uuid4().hex[:8].upper()}"
     
-    # 1. Create a local transaction record
     tx = PaymentTransaction.objects.create(
         landlord=landlord,
-        listing=listing,
         amount=amount,
         currency='ZMW',
         reference=reference,
         status=PaymentTransaction.Status.PENDING,
-        metadata={'tenant_phone': phone, 'initiated_by': request.user.email}
+        metadata=metadata
     )
     
-    # 2. Initiate payment with MTN using the LANDLORD'S credentials
     try:
         momo_ref = initiate_momo_payment(landlord, amount, phone, reference)
         tx.provider_transaction_id = momo_ref
@@ -53,12 +68,20 @@ def payment_status(request, reference):
     try:
         tx = PaymentTransaction.objects.get(reference=reference)
         if tx.status == PaymentTransaction.Status.PENDING and tx.provider_transaction_id:
-            # Poll MTN using the LANDLORD'S credentials
             status = check_momo_status(tx.landlord, tx.provider_transaction_id)
             
             if status == 'SUCCESSFUL':
                 tx.status = PaymentTransaction.Status.SUCCESS
                 tx.save()
+                
+                # If this payment was for a rent record, mark it PAID
+                rent_record_id = tx.metadata.get('rent_record_id')
+                if rent_record_id:
+                    from django.utils import timezone
+                    RentRecord.objects.filter(id=rent_record_id).update(
+                        status=RentRecord.Status.PAID,
+                        paid_date=timezone.now().date()
+                    )
             elif status == 'FAILED':
                 tx.status = PaymentTransaction.Status.FAILED
                 tx.save()
@@ -66,21 +89,3 @@ def payment_status(request, reference):
         return Response({"status": tx.status})
     except PaymentTransaction.DoesNotExist:
         return Response({"error": "Transaction not found"}, status=404)
-
-@csrf_exempt
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def momo_callback(request):
-    """Webhook endpoint for MTN to send the final status."""
-    data = request.data
-    momo_ref = data.get('financialTransactionId') or data.get('externalId')
-    status = data.get('status')
-    
-    if status == 'SUCCESSFUL':
-        try:
-            tx = PaymentTransaction.objects.get(provider_transaction_id=momo_ref)
-            tx.status = PaymentTransaction.Status.SUCCESS
-            tx.save()
-        except PaymentTransaction.DoesNotExist:
-            pass
-    return Response(status=200)
