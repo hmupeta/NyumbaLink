@@ -20,4 +20,12 @@ export const authApi = {
 
   logout: () => api<void>('/auth/logout/', { method: 'POST' }),
   me: () => api<User>('/auth/me/'),
+  requestPasswordReset: (email: string, origin: string) => api('/auth/password-reset/', {
+    method: 'POST',
+    body: JSON.stringify({ email, origin }),
+  }),
+  resetPassword: (uid: string, token: string, password: string) => api('/auth/password-reset/confirm/', {
+    method: 'POST',
+    body: JSON.stringify({ uid, token, password }),
+  }),
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'auth_provider.dart';
 import 'main_layout.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -60,7 +61,14 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(controller: _emailCtrl, decoration: InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
               SizedBox(height: 16),
               TextField(controller: _passCtrl, decoration: InputDecoration(labelText: 'Password', border: OutlineInputBorder()), obscureText: true),
-              SizedBox(height: 24),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ForgotPasswordScreen())),
+                  child: Text("Forgot password?", style: TextStyle(color: Color(0xFF059669))),
+                ),
+              ),
+              SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 height: 50,

@@ -513,6 +513,15 @@ class ApiClient {
     if (res.statusCode != 201) throw Exception('Failed to submit report');
   }
 
+  static Future<void> requestPasswordReset(String email) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/auth/password-reset/'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'origin': 'https://nyumbalink-frontend-pbkm.onrender.com'}),
+    );
+    if (res.statusCode != 200) throw Exception('Failed to send reset link');
+  }
+
   // --- Saved Properties ---
   static Future<List<dynamic>> getSavedListings() async {
     final res = await http.get(Uri.parse('$baseUrl/saved-listings/'), headers: await getHeaders());
