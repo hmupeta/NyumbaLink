@@ -36,12 +36,11 @@ export default function AffordabilityCalculator({ onFilterUpdate, listings }: Pr
       setMaxHomePrice(Math.round(price))
       onFilterUpdate(Math.round(price), 'SALE')
     } else {
-      // Rent is simply 30% of income
       onFilterUpdate(Math.round(maxMonthlyRent), 'RENT')
     }
   }, [mode, income, downPayment, interestRate, termYears, onFilterUpdate, maxMonthlyRent])
 
-  // Filter listings based on the active mode
+  // Filter listings strictly by the current mode (SALE vs RENT)
   const affordableListings = listings.filter(l => {
     if (mode === 'SALE') {
       return l.transaction_type === 'SALE' && Number(l.price) <= maxHomePrice;
@@ -60,14 +59,13 @@ export default function AffordabilityCalculator({ onFilterUpdate, listings }: Pr
 
         <div className="grid md:grid-cols-3 gap-8">
           
-          {/* Calculator Panel */}
           <div className="bg-white border rounded-2xl p-6 shadow-sm h-fit">
             <div className="flex items-center gap-2 mb-6">
               <span className="text-blue-600 text-xl font-bold">Z</span>
               <h3 className="font-semibold text-gray-800">NyumbaLink Calculator</h3>
             </div>
 
-            {/* Mode Tabs */}
+            {/* Buy / Rent Tabs */}
             <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
               <button 
                 onClick={() => setMode('SALE')}
@@ -120,7 +118,6 @@ export default function AffordabilityCalculator({ onFilterUpdate, listings }: Pr
             </div>
           </div>
 
-          {/* Listings Carousel */}
           <div className="md:col-span-2 relative overflow-hidden">
              <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
                 {affordableListings.map(l => (

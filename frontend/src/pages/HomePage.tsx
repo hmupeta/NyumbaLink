@@ -162,7 +162,10 @@ export default function HomePage() {
 
       {/* ZILLOW FEATURES (Recommendations & Calculator) */}
       <RecommendationsSection />
-      <AffordabilityCalculator onBudgetChange={setAffordableBudget} listings={data?.results || []} />
+      <AffordabilityCalculator 
+        onFilterUpdate={(price, type) => setAffordableFilter(price && type ? { price, type } : null)} 
+        listings={data?.results || []} 
+      />
 
       {/* MAIN CONTENT */}
       <div className="flex-1 max-w-[1400px] w-full mx-auto px-4 py-8">
