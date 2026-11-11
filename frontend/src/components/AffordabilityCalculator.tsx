@@ -15,25 +15,41 @@ export default function AffordabilityCalculator({ onBudgetChange, listings }: Pr
 
   // Calculate maximum affordable price
   useEffect(() => {
-    // Assuming 30% of income goes to mortgage
+    // 1. Calculate the monthly housing budget (30% of income)
     const monthlyPayment = income * 0.30
+    
+    // 2. Calculate the loan amount using standard mortgage amortization
     const monthlyRate = (interestRate / 100) / 12
     const numPayments = termYears * 12
-
-    // Standard Mortgage Formula: P = M * [(1+r)^n - 1] / [r * (1+r)^n]
+    
     let loanAmount = 0
     if (monthlyRate > 0) {
+      // Standard Mortgage Formula: P = M * [(1+r)^n - 1] / [r * (1+r)^n]
       loanAmount = monthlyPayment * (Math.pow(1 + monthlyRate, numPayments) - 1) / (monthlyRate * Math.pow(1 + monthlyRate, numPayments))
     } else {
+      // If interest is 0%, simple multiplication
       loanAmount = monthlyPayment * numPayments
     }
 
+    // 3. Add down payment to get the max home price
     const maxHomePrice = loanAmount + downPayment
     onBudgetChange(Math.round(maxHomePrice))
   }, [income, downPayment, interestRate, termYears, onBudgetChange])
 
   // Filter listings that fall within the calculated budget
-  const affordableListings = listings.filter(l => Number(l.price) <= (income * 0.30 * termYears * 12 + downPayment))
+  // (We compute the max price exactly as we did in the useEffect above)
+  const monthlyPayment = income * 0.30
+  const monthlyRate = (interestRate / 100) / 12
+  const numPayments = termYears * 12
+  let maxLoan = 0
+  if (monthlyRate > 0) {
+    maxLoan = monthlyPayment * (Math.pow(1 + monthlyRate, numPayments) - 1) / (monthlyRate * Math.pow(1 + monthlyRate, numPayments))
+  } else {
+    maxLoan = monthlyPayment * numPayments
+  }
+  const maxAffordablePrice = maxLoan + downPayment
+
+  const affordableListings = listings.filter(l => Number(l.price) <= maxAffordablePrice)
 
   return (
     <div className="bg-white py-16">
