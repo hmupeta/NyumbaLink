@@ -147,6 +147,21 @@ RENT: ZMW {lease.monthly_rent} payable monthly.
         ).exclude(tenant_email="").prefetch_related("rent_records")
         return Response(self.get_serializer(leases, many=True).data)
 
+
+    @action(detail=True, methods=["get"])
+    def download_pdf(self, request, pk=None):
+        from django.http import HttpResponse
+        from apps.payments.pdf_service import generate_lease_pdf
+        lease = self.get_object()
+        
+        if not (lease.landlord_signed or lease.tenant_signed):
+            return Response({"detail": "Lease has not been signed yet."}, status=400)
+            
+        pdf_bytes = generate_lease_pdf(lease)
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="lease-{str(lease.id)[:8]}.pdf"'
+        return response
+
     def perform_create(self, serializer):
         lease = serializer.save(landlord=self.request.user)
         current_date = lease.start_date
@@ -169,6 +184,18 @@ class RentRecordViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return RentRecord.objects.filter(lease__landlord=self.request.user)
+
+
+    @action(detail=True, methods=["get"])
+    def download_invoice(self, request, pk=None):
+        from django.http import HttpResponse
+        from apps.payments.pdf_service import generate_invoice_pdf
+        record = self.get_object()
+        
+        pdf_bytes = generate_invoice_pdf(record)
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="invoice-{str(record.id)[:8]}.pdf"'
+        return response
 
     @action(detail=True, methods=["post"])
     def mark_paid(self, request, pk=None):
