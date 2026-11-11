@@ -9,6 +9,7 @@ router.register("listings", ListingViewSet, basename="listing")
 router.register("reports", ReportViewSet, basename="report")
 router.register("saved-listings", SavedListingViewSet, basename="saved-listing")
 router.register("hero-images", HeroImageViewSet, basename="hero-image")
+router.register("authorities", PropertyAuthorityViewSet, basename="authority")
 
 listing_router = nested_routers.NestedDefaultRouter(router, "listings", lookup="listing")
 listing_router.register("media", ListingMediaViewSet, basename="listing-media")

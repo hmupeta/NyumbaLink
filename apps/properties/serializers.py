@@ -168,3 +168,13 @@ class HeroImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = HeroImage
         fields = ("id", "title", "subtitle", "image", "display_order")
+
+
+class PropertyAuthoritySerializer(serializers.ModelSerializer):
+    granted_to_email = serializers.CharField(source="granted_to.email", read_only=True)
+    
+    class Meta:
+        from .models import PropertyAuthority
+        model = PropertyAuthority
+        fields = ("id", "property", "granted_to", "granted_to_email", "granted_by", "can_list", "can_edit", "expires_at", "revoked_at")
+        read_only_fields = ("id", "granted_by", "revoked_at")

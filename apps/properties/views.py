@@ -11,6 +11,7 @@ from apps.payments.models import ContactUnlock
 from apps.messaging.models import Conversation
 from .permissions import user_can_edit_listing, user_can_manage_property, user_is_moderator
 from .serializers import (
+    PropertyAuthoritySerializer,
     ListingActionSerializer,
     ListingMediaSerializer,
     ListingSerializer,
@@ -322,3 +323,43 @@ class HeroImageViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = HeroImage.objects.filter(is_active=True)
     serializer_class = HeroImageSerializer
     permission_classes = [permissions.AllowAny]
+
+
+class PropertyAuthorityViewSet(viewsets.ModelViewSet):
+    serializer_class = PropertyAuthoritySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "post", "patch", "delete"]
+
+    def get_queryset(self):
+        # Landlords see who they granted access to; Agents see what they have access to
+        from django.db.models import Q
+        return PropertyAuthority.objects.filter(
+            Q(granted_by=self.request.user) | Q(granted_to=self.request.user)
+        ).select_related("property", "granted_to")
+
+    def perform_create(self, serializer):
+        property_id = self.request.data.get("property")
+        email = self.request.data.get("granted_to_email")
+        
+        from django.contrib.auth import get_user_model
+        from .models import Property
+        from apps.notifications.services import create_notification
+        
+        User = get_user_model()
+        prop = Property.objects.get(id=property_id)
+        
+        if prop.submitted_by != self.request.user:
+            raise permissions.PermissionDenied("Only the property owner can grant authority.")
+            
+        agent = User.objects.filter(email__iexact=email).first()
+        if not agent:
+            raise serializers.ValidationError("No user found with that email.")
+            
+        authority = serializer.save(property=prop, granted_to=agent, granted_by=self.request.user)
+        
+        create_notification(
+            user=agent,
+            title="New Property Access",
+            message=f"You have been granted access to manage {prop.neighbourhood.name}.",
+            link=f"/dashboard"
+        )
