@@ -89,3 +89,23 @@ def payment_status(request, reference):
         return Response({"status": tx.status})
     except PaymentTransaction.DoesNotExist:
         return Response({"error": "Transaction not found"}, status=404)
+
+
+# --- Added by fix_momo_callback.py -----------------------------------------
+# These imports are safe to duplicate; Python ignores repeat imports.
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+
+@csrf_exempt
+@require_POST
+def momo_callback(request):
+    """
+    Webhook endpoint for MTN MoMo (or other mobile-money) payment callbacks.
+
+    TODO: verify the provider signature, look up the Payment/Order record,
+          and update its status inside a transaction.atomic() block.
+    """
+    return JsonResponse({"status": "received"}, status=200)
+# ---------------------------------------------------------------------------
