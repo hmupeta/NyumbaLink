@@ -57,7 +57,7 @@ export default function HomePage() {
   }, [searchParams]);
   const [showFilters, setShowFilters] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
-  const [affordableBudget, setAffordableBudget] = useState<number | undefined>()
+  const [affordableFilter, setAffordableFilter] = useState<{ price: number, type: 'SALE' | 'RENT' } | null>(null)
   const [currentSlide, setCurrentSlide] = useState(0)
 
   const { data: heroData } = useQuery({ queryKey: ['hero-images'], queryFn: heroApi.list })
