@@ -2,6 +2,11 @@ import 'package:intl/intl.dart';
 
 import 'package:flutter/material.dart';
 import 'api_client.dart';
+import 'landlord_dashboard_screen.dart';
+import 'main_layout.dart';
+import 'lease_agreement_screen.dart';
+import 'landlord_profile_screen.dart';
+import 'listing_detail_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   @override
@@ -17,6 +22,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _notificationsFuture = ApiClient.getNotifications();
     // Mark all as read when we open the screen
     ApiClient.markAllNotificationsRead();
+  }
+
+  void _handleNotificationTap(BuildContext context, String? link) {
+    if (link == null || link.isEmpty) return;
+    Navigator.pop(context); // Close the notifications screen
+
+    if (link.startsWith('/inbox')) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MainLayout(initialTabIndex: 2))); // Inbox tab
+    } else if (link.startsWith('/dashboard')) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => LandlordDashboardScreen()));
+    } else if (link.startsWith('/leases/')) {
+      final leaseId = link.split('/').last;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => LeaseAgreementScreen(leaseId: leaseId)));
+    } else if (link.startsWith('/profiles/')) {
+      final userId = link.split('/').last;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => LandlordProfileScreen(landlordId: userId, landlordEmail: '')));
+    } else if (link.startsWith('/listings/')) {
+      final listingId = link.split('/').last;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => ListingDetailScreen(listingId: listingId)));
+    }
   }
 
   @override
@@ -37,6 +62,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             itemBuilder: (context, index) {
               final n = notifs[index];
               return ListTile(
+                onTap: () => _handleNotificationTap(context, n['link']),
                 leading: CircleAvatar(
                   backgroundColor: n['is_read'] ? Colors.grey[200] : Colors.green[50],
                   child: Icon(Icons.notifications, color: n['is_read'] ? Colors.grey : Color(0xFF059669)),

@@ -98,6 +98,62 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     if (mounted) setState(() => _startingChat = false);
   }
 
+  void _showReportModal() {
+    String reason = 'FRAUD';
+    final descCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("Report Listing", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red)),
+                SizedBox(height: 8),
+                Text("Help us keep NyumbaLink safe.", style: TextStyle(color: Colors.grey)),
+                SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: reason,
+                  decoration: InputDecoration(labelText: 'Reason', border: OutlineInputBorder()),
+                  items: ['FRAUD', 'DUPLICATE', 'WRONG_INFO', 'UNAVAILABLE', 'OFFENSIVE']
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r.replace('_', ' ')))).toList(),
+                  onChanged: (val) => setModalState(() => reason = val!),
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  decoration: InputDecoration(labelText: 'Details (Optional)', border: OutlineInputBorder()),
+                  maxLines: 2,
+                ),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      await ApiClient.submitReport(widget.listingId, reason, descCtrl.text);
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Report submitted. Thank you.")));
+                      }
+                    } catch (e) {
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to submit report")));
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, minimumSize: Size(double.infinity, 50)),
+                  child: Text("Submit Report"),
+                ),
+                SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
@@ -206,6 +262,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                               Icon(Icons.chevron_right, color: Colors.grey),
                             ],
                           ),
+                      ),
+                      SizedBox(height: 4),
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: _showReportModal,
+                          icon: Icon(Icons.flag, color: Colors.red, size: 16),
+                          label: Text("Report this listing", style: TextStyle(color: Colors.red, fontSize: 12)),
+                        ),
+                      ),
                         ),
                       ),
                       SizedBox(height: 24),
@@ -396,6 +461,62 @@ class _PaymentModalState extends State<_PaymentModal> {
     if (mounted) setState(() => _isProcessing = false);
   }
 
+  void _showReportModal() {
+    String reason = 'FRAUD';
+    final descCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("Report Listing", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red)),
+                SizedBox(height: 8),
+                Text("Help us keep NyumbaLink safe.", style: TextStyle(color: Colors.grey)),
+                SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: reason,
+                  decoration: InputDecoration(labelText: 'Reason', border: OutlineInputBorder()),
+                  items: ['FRAUD', 'DUPLICATE', 'WRONG_INFO', 'UNAVAILABLE', 'OFFENSIVE']
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r.replace('_', ' ')))).toList(),
+                  onChanged: (val) => setModalState(() => reason = val!),
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  decoration: InputDecoration(labelText: 'Details (Optional)', border: OutlineInputBorder()),
+                  maxLines: 2,
+                ),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      await ApiClient.submitReport(widget.listingId, reason, descCtrl.text);
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Report submitted. Thank you.")));
+                      }
+                    } catch (e) {
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to submit report")));
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, minimumSize: Size(double.infinity, 50)),
+                  child: Text("Submit Report"),
+                ),
+                SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -468,6 +589,62 @@ class _RentPaymentModalState extends State<_RentPaymentModal> {
       }
     }
     if (mounted) setState(() => _isProcessing = false);
+  }
+
+  void _showReportModal() {
+    String reason = 'FRAUD';
+    final descCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("Report Listing", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red)),
+                SizedBox(height: 8),
+                Text("Help us keep NyumbaLink safe.", style: TextStyle(color: Colors.grey)),
+                SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: reason,
+                  decoration: InputDecoration(labelText: 'Reason', border: OutlineInputBorder()),
+                  items: ['FRAUD', 'DUPLICATE', 'WRONG_INFO', 'UNAVAILABLE', 'OFFENSIVE']
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r.replace('_', ' ')))).toList(),
+                  onChanged: (val) => setModalState(() => reason = val!),
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  decoration: InputDecoration(labelText: 'Details (Optional)', border: OutlineInputBorder()),
+                  maxLines: 2,
+                ),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      await ApiClient.submitReport(widget.listingId, reason, descCtrl.text);
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Report submitted. Thank you.")));
+                      }
+                    } catch (e) {
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to submit report")));
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, minimumSize: Size(double.infinity, 50)),
+                  child: Text("Submit Report"),
+                ),
+                SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override

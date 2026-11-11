@@ -5,12 +5,20 @@ import 'inbox_screen.dart';
 import 'profile_screen.dart';
 
 class MainLayout extends StatefulWidget {
+  final int initialTabIndex;
+  MainLayout({this.initialTabIndex = 0});
   @override
   _MainLayoutState createState() => _MainLayoutState();
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialTabIndex;
+  }
   final List<Widget> _screens = [
     HomeScreen(),
     SavedScreen(),

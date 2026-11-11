@@ -504,6 +504,15 @@ class ApiClient {
     throw Exception('Failed to request lease');
   }
 
+  static Future<void> submitReport(String listingId, String reason, String description) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/reports/'),
+      headers: await getHeaders(),
+      body: jsonEncode({'target_listing': listingId, 'reason': reason, 'description': description}),
+    );
+    if (res.statusCode != 201) throw Exception('Failed to submit report');
+  }
+
   // --- Saved Properties ---
   static Future<List<dynamic>> getSavedListings() async {
     final res = await http.get(Uri.parse('$baseUrl/saved-listings/'), headers: await getHeaders());
