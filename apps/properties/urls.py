@@ -1,7 +1,7 @@
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers as nested_routers
 
-from .views import HeroImageViewSet, ListingMediaViewSet, ListingViewSet, PropertyViewSet, ReportViewSet, SavedListingViewSet
+from .views import HeroImageViewSet, ListingMediaViewSet, ListingViewSet, PropertyViewSet, ReportViewSet, SavedListingViewSet, PropertyAuthorityViewSet
 
 router = DefaultRouter()
 router.register("properties", PropertyViewSet, basename="property")
