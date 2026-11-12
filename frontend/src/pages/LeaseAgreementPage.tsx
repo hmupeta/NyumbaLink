@@ -30,7 +30,9 @@ export default function LeaseAgreementPage() {
 
   if (isLoading || !lease) return <Loading />
 
-  const isLandlord = user?.id === lease.landlord
+  const isLandlord = 
+    String(user?.id) === String(lease.landlord) || 
+    (!!user?.email && !!lease.landlord_email && user.email.toLowerCase() === lease.landlord_email.toLowerCase())
   const isTenant = user?.email?.toLowerCase() === lease.tenant_email?.toLowerCase()
   const userSigned = isLandlord ? lease.landlord_signed : lease.tenant_signed
   const bothSigned = lease.landlord_signed && lease.tenant_signed
