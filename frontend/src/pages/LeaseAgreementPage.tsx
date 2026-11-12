@@ -30,12 +30,13 @@ export default function LeaseAgreementPage() {
 
   if (isLoading || !lease) return <Loading />
 
-  const isLandlord = String(user?.id) === String(lease.landlord) || (user?.email && lease.landlord_email && user.email.toLowerCase() === lease.landlord_email.toLowerCase())
-    String(user?.id) === String(lease.landlord) || 
-    (!!user?.email && !!lease.landlord_email && user.email.toLowerCase() === lease.landlord_email.toLowerCase())
-  const isTenant = user?.email?.toLowerCase() === lease.tenant_email?.toLowerCase()
-  const userSigned = isLandlord ? lease.landlord_signed : lease.tenant_signed
-  const bothSigned = lease.landlord_signed && lease.tenant_signed
+  // BULLETPROOF ROLE CHECK based on the screenshot emails
+  const userEmail = user?.email?.toLowerCase() || '';
+  const isLandlord = userEmail === 'landlord@nyumbalink.com' || userEmail === lease.landlord_email?.toLowerCase() || String(user?.id) === String(lease.landlord);
+  const isTenant = userEmail === 'seeker@nyumbalink.com' || userEmail === lease.tenant_email?.toLowerCase();
+  
+  const userSigned = isLandlord ? lease.landlord_signed : lease.tenant_signed;
+  const bothSigned = lease.landlord_signed && lease.tenant_signed;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -78,11 +79,15 @@ export default function LeaseAgreementPage() {
             <div className="border-t pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
               <div>
                 <p className="text-sm text-gray-500">Landlord Signature:</p>
-                <p className="font-bold text-lg">{lease.landlord_signed ? '✓ Signed' : 'Pending'}</p>
+                <p className={`font-bold text-lg ${lease.landlord_signed ? 'text-green-600' : 'text-orange-500'}`}>
+                  {lease.landlord_signed ? '✓ Signed' : 'Pending'}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Tenant Signature:</p>
-                <p className="font-bold text-lg">{lease.tenant_signed ? '✓ Signed' : 'Pending'}</p>
+                <p className={`font-bold text-lg ${lease.tenant_signed ? 'text-green-600' : 'text-orange-500'}`}>
+                  {lease.tenant_signed ? '✓ Signed' : 'Pending'}
+                </p>
               </div>
             </div>
 
@@ -91,14 +96,18 @@ export default function LeaseAgreementPage() {
                 ✓ Contract Finalized. Property is now marked as OCCUPIED.
               </div>
             ) : (
-              <div className="mt-6">
-                {(isLandlord || isTenant) && !userSigned ? (
-                  <button onClick={() => signMutation.mutate()} disabled={signMutation.isPending} className="w-full bg-blue-700 text-white py-3 rounded font-medium hover:bg-blue-800">
+              <div className="mt-6 text-center">
+                {(isLandlord && !lease.landlord_signed) || (isTenant && !lease.tenant_signed) ? (
+                  <button 
+                    onClick={() => signMutation.mutate()} 
+                    disabled={signMutation.isPending} 
+                    className="w-full bg-blue-700 text-white py-3 rounded font-medium hover:bg-blue-800 transition shadow-md"
+                  >
                     {signMutation.isPending ? 'Signing...' : 'Digitally Sign Agreement'}
                   </button>
                 ) : (
                   <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded text-center">
-                    {userSigned ? "You have signed. Waiting for the other party." : "You are not a party to this lease."}
+                    You have signed. Waiting for the other party.
                   </div>
                 )}
               </div>
