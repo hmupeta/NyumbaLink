@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { managementApi } from '../api/management'
 import MomoPaymentModal from '../components/MomoPaymentModal'
 import Loading from '../components/Loading'
 
 export default function TenantsList() {
-  const queryClient = useQueryClient()
-  const [expandedLease, setExpandedLease] = useState<string | null>(null)
+const [expandedLease, setExpandedLease] = useState<string | null>(null)
   const [payingRecord, setPayingRecord] = useState<any>(null)
 
   const { data, isLoading } = useQuery({
