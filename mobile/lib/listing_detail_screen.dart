@@ -120,7 +120,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   value: reason,
                   decoration: InputDecoration(labelText: 'Reason', border: OutlineInputBorder()),
                   items: ['FRAUD', 'DUPLICATE', 'WRONG_INFO', 'UNAVAILABLE', 'OFFENSIVE']
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r.replace('_', ' ')))).toList(),
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r.replaceAll('_', ' ')))).toList(),
                   onChanged: (val) => setModalState(() => reason = val!),
                 ),
                 SizedBox(height: 12),
@@ -419,7 +419,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                     ],
                   ),
                 ),
-              ],
+              ]
             ),
           );
         },
@@ -483,7 +483,7 @@ class _PaymentModalState extends State<_PaymentModal> {
                   value: reason,
                   decoration: InputDecoration(labelText: 'Reason', border: OutlineInputBorder()),
                   items: ['FRAUD', 'DUPLICATE', 'WRONG_INFO', 'UNAVAILABLE', 'OFFENSIVE']
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r.replace('_', ' ')))).toList(),
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r.replaceAll('_', ' ')))).toList(),
                   onChanged: (val) => setModalState(() => reason = val!),
                 ),
                 SizedBox(height: 12),
@@ -613,7 +613,7 @@ class _RentPaymentModalState extends State<_RentPaymentModal> {
                   value: reason,
                   decoration: InputDecoration(labelText: 'Reason', border: OutlineInputBorder()),
                   items: ['FRAUD', 'DUPLICATE', 'WRONG_INFO', 'UNAVAILABLE', 'OFFENSIVE']
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r.replace('_', ' ')))).toList(),
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r.replaceAll('_', ' ')))).toList(),
                   onChanged: (val) => setModalState(() => reason = val!),
                 ),
                 SizedBox(height: 12),
