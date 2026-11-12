@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery , useMutation, useQueryClient } from '@tanstack/react-query'
 import { managementApi } from '../api/management'
 import MomoPaymentModal from '../components/MomoPaymentModal'
 import Loading from '../components/Loading'
@@ -7,6 +7,21 @@ import Loading from '../components/Loading'
 export default function TenantsList() {
 const [expandedLease, setExpandedLease] = useState<string | null>(null)
   const [payingRecord, setPayingRecord] = useState<any>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [formData, setFormData] = useState({ tenant_email: '', property: '', start_date: '', end_date: '', monthly_rent: '', deposit: '' })
+  const queryClient = useQueryClient()
+
+  const createMutation = useMutation({
+    mutationFn: () => managementApi.createLease(formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leases'] })
+      setShowCreateModal(false)
+      setFormData({ tenant_email: '', property: '', start_date: '', end_date: '', monthly_rent: '', deposit: '' })
+      alert("Lease issued successfully!")
+    },
+    onError: (err: any) => alert("Error: " + err.message)
+  })
+
 
   const { data, isLoading } = useQuery({
     queryKey: ['leases'],
@@ -18,6 +33,14 @@ const [expandedLease, setExpandedLease] = useState<string | null>(null)
 
   return (<>
     <div className="space-y-4">
+
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Tenants & Leases</h1>
+        <button onClick={() => setShowCreateModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition">
+          + Issue New Lease
+        </button>
+      </div>
+
       {data?.results.length === 0 && (
         <div className="text-center py-12 bg-white rounded border">
           <p className="text-gray-500">You don't have any active tenants yet.</p>
