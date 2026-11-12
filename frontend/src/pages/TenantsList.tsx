@@ -21,7 +21,7 @@ export default function TenantsList() {
 
   if (isLoading) return <Loading />
 
-  return (
+  return (<>
     <div className="space-y-4">
       {data?.results.length === 0 && (
         <div className="text-center py-12 bg-white rounded border">
@@ -113,6 +113,6 @@ export default function TenantsList() {
         onClose={() => setPayingRecord(null)}
       />
     )}
-  </div>
+  </>
   )
 }
