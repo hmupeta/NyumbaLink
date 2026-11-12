@@ -14,9 +14,6 @@ export default function TenantsList() {
     queryFn: managementApi.listLeases,
   })
 
-    mutationFn: ({ leaseId, recordId }: { leaseId: string, recordId: string }) => managementApi.markRentPaid(leaseId, recordId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leases'] })
-  })
 
   if (isLoading) return <Loading />
 
@@ -45,7 +42,7 @@ export default function TenantsList() {
                           Manage Lease / Sign
                         </a>
                       </div>
-                <p className="text-sm text-gray-600">{lease.property_name} · {lease.tenant_phone}</p>
+                <p className="text-sm text-gray-600">{lease.property_name} Â· {lease.tenant_phone}</p>
                 <p className="text-xs text-gray-500 mt-1">Lease ends: {new Date(lease.end_date).toLocaleDateString()}</p>
               </div>
               <div className="text-right">
