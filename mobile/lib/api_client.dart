@@ -608,11 +608,11 @@ class ApiClient {
     _checkResponse(res.statusCode);
     if (res.statusCode != 200) throw Exception('Failed to react');
   }
-}
+
   static Future<Map<String, dynamic>> checkStatus(String reference) async {
     final res = await http.get(Uri.parse('$baseUrl/payments/status/$reference/'), headers: await getHeaders());
     _checkResponse(res.statusCode);
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Failed to check payment status');
   }
-
+}
