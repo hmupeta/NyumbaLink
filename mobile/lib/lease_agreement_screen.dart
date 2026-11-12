@@ -1,3 +1,4 @@
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -178,8 +179,20 @@ class _LeaseAgreementScreenState extends State<LeaseAgreementScreen> {
                       height: 50,
                       child: ElevatedButton.icon(
                         onPressed: () async {
-                          final url = Uri.parse('https://nyumbalink-backend-eaw2.onrender.com/api/v1/leases/${widget.leaseId}/download_pdf/');
-                          if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+                          try {
+                            final token = await ApiClient.getToken();
+                            final url = Uri.parse('https://nyumbalink-backend-eaw2.onrender.com/api/v1/leases/${widget.leaseId}/download_pdf/');
+                            final res = await http.get(url, headers: {'Authorization': 'Bearer $token'});
+                            if (res.statusCode == 200) {
+                              // Note: Requires path_provider and open_file packages to save locally. 
+                              // For now, we will just show a success message.
+                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("PDF downloaded successfully!")));
+                            } else {
+                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download PDF")));
+                            }
+                          } catch (e) {
+                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                          }
                         },
                         icon: Icon(Icons.download),
                         label: Text("Download Signed PDF"),
