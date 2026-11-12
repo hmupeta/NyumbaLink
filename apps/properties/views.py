@@ -100,7 +100,7 @@ class ListingViewSet(viewsets.ModelViewSet):
 
         # PUBLIC LIST VIEW (Homepage): ALWAYS only return PUBLISHED
         if self.action == "list":
-            return qs.exclude(property__occupancy_status='OCCUPIED').exclude(property__status='OCCUPIED').filter(status=ListingStatus.PUBLISHED)
+            return qs.filter(status=ListingStatus.PUBLISHED)
 
         # DETAIL ACTIONS (Update, Delete, Submit, Publish):
         # Allow if it's published OR if the user owns it
@@ -112,7 +112,7 @@ class ListingViewSet(viewsets.ModelViewSet):
             )
 
         # Anonymous users can only see published listings
-        return qs.exclude(property__occupancy_status='OCCUPIED').exclude(property__status='OCCUPIED').filter(status=ListingStatus.PUBLISHED)
+        return qs.filter(status=ListingStatus.PUBLISHED)
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
