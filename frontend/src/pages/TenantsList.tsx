@@ -18,16 +18,16 @@ export default function TenantsList() {
     queryFn: managementApi.listLeases,
   })
 
-  // Fetch Properties (Filter out OCCUPIED)
+  // Fetch Properties
   const { data: propertiesData } = useQuery({
     queryKey: ['properties'],
     queryFn: () => api<any>('/properties/'),
   })
 
-  // Fetch Viewing Requests
+  // Fetch Viewing Requests (Corrected endpoint: /viewings/)
   const { data: viewingsData } = useQuery({
     queryKey: ['viewings'],
-    queryFn: () => api<any>('/viewing-requests/'),
+    queryFn: () => api<any>('/viewings/'),
   })
 
   const createMutation = useMutation({
@@ -54,22 +54,26 @@ export default function TenantsList() {
   const getPropName = (p: any) => p.title || p.name || p.address || p.property_name || 'Unnamed Property'
   const getPropPrice = (p: any) => p.price || p.rent || p.rent_amount || p.monthly_rent || 0
 
+  // Robust field fallbacks for viewing requests
+  const getViewingPropertyId = (v: any) => v.property || v.property_id || v.listing || v.listing_id
+  const getViewingEmail = (v: any) => v.tenant_email || v.seeker_email || v.seeker?.email || v.tenant?.email || v.user_email || ''
+  const getViewingName = (v: any) => v.tenant_name || v.seeker_name || v.seeker?.name || v.tenant?.name || 'Seeker'
+
   // Filter viewing requests for the selected property
   const interestedViewings = viewingsList.filter((v: any) => 
-    (v.property === formData.property || v.property_id === formData.property)
+    String(getViewingPropertyId(v)) === String(formData.property)
   )
   
-  const uniqueTenants = Array.from(new Set(interestedViewings.map((v: any) => 
-    v.tenant_email || v.seeker_email || v.user_email
-  ))).filter(Boolean).map(email => {
-       const v = interestedViewings.find((v: any) => (v.tenant_email || v.seeker_email || v.user_email) === email);
-       const name = v?.tenant_name || v?.seeker_name || v?.user_name || 'Seeker';
-       return { email, name };
+  const uniqueTenants = Array.from(new Set(interestedViewings.map(getViewingEmail)))
+    .filter(Boolean)
+    .map(email => {
+       const v = interestedViewings.find((v: any) => getViewingEmail(v) === email);
+       return { email, name: getViewingName(v) };
     });
 
   // Auto-fill rent when property is selected
   const handlePropertyChange = (propId: string) => {
-    const selectedProp = availableProperties.find((p: any) => p.id === propId);
+    const selectedProp = availableProperties.find((p: any) => String(p.id) === String(propId));
     const price = selectedProp ? getPropPrice(selectedProp) : '';
     setFormData({ ...formData, property: propId, monthly_rent: price ? String(price) : formData.monthly_rent });
   }
