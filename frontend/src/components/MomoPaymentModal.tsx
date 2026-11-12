@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { paymentsApi } from '../api/payments'
+import { integrationsApi } from "../api/integrations.ts";
 
 interface Props {
   rentRecordId?: string
@@ -20,7 +20,7 @@ export default function MomoPaymentModal({ rentRecordId, listingId, amount, onSu
     if (step === 'waiting' && reference) {
       interval = setInterval(async () => {
         try {
-          const res = await paymentsApi.checkStatus(reference)
+          const res = await integrationsApi.checkStatus(reference)
           if (res.status === 'SUCCESS') {
             setStep('success')
             setTimeout(onSuccess, 1500)
@@ -39,7 +39,7 @@ export default function MomoPaymentModal({ rentRecordId, listingId, amount, onSu
     setError('')
     setStep('waiting')
     try {
-      const res = await paymentsApi.initiatePayment({
+      const res = await integrationsApi.initiatePayment({
         rent_record_id: rentRecordId,
         listing_id: listingId,
         amount,

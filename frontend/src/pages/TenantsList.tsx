@@ -14,7 +14,6 @@ export default function TenantsList() {
     queryFn: managementApi.listLeases,
   })
 
-  const markPaidMutation = useMutation({
     mutationFn: ({ leaseId, recordId }: { leaseId: string, recordId: string }) => managementApi.markRentPaid(leaseId, recordId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leases'] })
   })
