@@ -235,7 +235,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
                       // Landlord Info Row
                       GestureDetector(
-  onTap: () {},
                         onTap: () {
                           Navigator.push(context, MaterialPageRoute(
                             builder: (_) => LandlordProfileScreen(
@@ -264,6 +263,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                             ],
                           ),
                       ),
+                    ),
                       SizedBox(height: 4),
                       Center(
                         child: TextButton.icon(
