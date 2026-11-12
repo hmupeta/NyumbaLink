@@ -1,3 +1,4 @@
+from apps.properties.models import Listing
 from datetime import timedelta
 
 from rest_framework import viewsets, permissions, status
