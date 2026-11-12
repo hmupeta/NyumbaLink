@@ -120,7 +120,33 @@ const [expandedLease, setExpandedLease] = useState<string | null>(null)
       })}
     </div>
     
-    {payingRecord && (
+    
+      {/* CREATE LEASE MODAL */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 className="text-xl font-bold mb-4">Issue New Lease</h2>
+            <div className="space-y-3">
+              <input placeholder="Tenant Email" className="w-full border rounded px-3 py-2" value={formData.tenant_email} onChange={e => setFormData({...formData, tenant_email: e.target.value})} />
+              <input placeholder="Property ID (UUID)" className="w-full border rounded px-3 py-2" value={formData.property} onChange={e => setFormData({...formData, property: e.target.value})} />
+              <div className="flex gap-2">
+                <input type="date" className="w-full border rounded px-3 py-2" value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target.value})} />
+                <input type="date" className="w-full border rounded px-3 py-2" value={formData.end_date} onChange={e => setFormData({...formData, end_date: e.target.value})} />
+              </div>
+              <input placeholder="Monthly Rent" type="number" className="w-full border rounded px-3 py-2" value={formData.monthly_rent} onChange={e => setFormData({...formData, monthly_rent: e.target.value})} />
+              <input placeholder="Deposit" type="number" className="w-full border rounded px-3 py-2" value={formData.deposit} onChange={e => setFormData({...formData, deposit: e.target.value})} />
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setShowCreateModal(false)} className="flex-1 bg-gray-100 py-2 rounded">Cancel</button>
+              <button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="flex-1 bg-emerald-600 text-white py-2 rounded font-medium">
+                {createMutation.isPending ? 'Creating...' : 'Issue Lease'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {payingRecord && (
       <MomoPaymentModal
         rentRecordId={payingRecord.id}
         amount={Number(payingRecord.amount)}

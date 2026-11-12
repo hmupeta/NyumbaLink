@@ -30,7 +30,7 @@ export default function LeaseAgreementPage() {
 
   if (isLoading || !lease) return <Loading />
 
-  const isLandlord = user?.role === 'LANDLORD' || user?.email?.toLowerCase() === 'landlord@nyumbalink.com'
+  const isLandlord = String(user?.id) === String(lease.landlord) || (user?.email && lease.landlord_email && user.email.toLowerCase() === lease.landlord_email.toLowerCase())
     String(user?.id) === String(lease.landlord) || 
     (!!user?.email && !!lease.landlord_email && user.email.toLowerCase() === lease.landlord_email.toLowerCase())
   const isTenant = user?.email?.toLowerCase() === lease.tenant_email?.toLowerCase()
