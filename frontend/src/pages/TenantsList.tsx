@@ -18,16 +18,16 @@ export default function TenantsList() {
     queryFn: managementApi.listLeases,
   })
 
-  // Fetch Landlord Properties (filter out occupied ones)
+  // Fetch Properties (Filter out OCCUPIED)
   const { data: propertiesData } = useQuery({
     queryKey: ['properties'],
-    queryFn: () => api<{results: any[]}>('/properties/'),
+    queryFn: () => api<any>('/properties/'),
   })
 
-  // Fetch Viewing Requests to find interested tenants
+  // Fetch Viewing Requests
   const { data: viewingsData } = useQuery({
     queryKey: ['viewings'],
-    queryFn: () => api<{results: any[]}>('/viewing-requests/'),
+    queryFn: () => api<any>('/viewing-requests/'),
   })
 
   const createMutation = useMutation({
@@ -41,16 +41,38 @@ export default function TenantsList() {
     onError: (err: any) => alert("Error: " + err.message)
   })
 
-  // Filter properties that are not occupied
-  const availableProperties = propertiesData?.results.filter((p: any) => p.status !== 'OCCUPIED') || []
+  // Handle API pagination (results or raw array)
+  const propsList = propertiesData?.results || propertiesData || []
+  const viewingsList = viewingsData?.results || viewingsData || []
   
-  // Filter viewing requests for the selected property to find unique tenants
-  const interestedViewings = viewingsData?.results.filter((v: any) => v.property === formData.property) || []
-  const uniqueTenants = Array.from(new Set(interestedViewings.map((v: any) => v.tenant_email)))
-    .map(email => {
-       const v = interestedViewings.find((v: any) => v.tenant_email === email);
-       return { email, name: v?.tenant_name || email };
+  const availableProperties = propsList.filter((p: any) => {
+    const status = (p.status || p.occupancy_status || '').toUpperCase();
+    return status !== 'OCCUPIED';
+  })
+
+  // Robust field fallbacks for properties
+  const getPropName = (p: any) => p.title || p.name || p.address || p.property_name || 'Unnamed Property'
+  const getPropPrice = (p: any) => p.price || p.rent || p.rent_amount || p.monthly_rent || 0
+
+  // Filter viewing requests for the selected property
+  const interestedViewings = viewingsList.filter((v: any) => 
+    (v.property === formData.property || v.property_id === formData.property)
+  )
+  
+  const uniqueTenants = Array.from(new Set(interestedViewings.map((v: any) => 
+    v.tenant_email || v.seeker_email || v.user_email
+  ))).filter(Boolean).map(email => {
+       const v = interestedViewings.find((v: any) => (v.tenant_email || v.seeker_email || v.user_email) === email);
+       const name = v?.tenant_name || v?.seeker_name || v?.user_name || 'Seeker';
+       return { email, name };
     });
+
+  // Auto-fill rent when property is selected
+  const handlePropertyChange = (propId: string) => {
+    const selectedProp = availableProperties.find((p: any) => p.id === propId);
+    const price = selectedProp ? getPropPrice(selectedProp) : '';
+    setFormData({ ...formData, property: propId, monthly_rent: price ? String(price) : formData.monthly_rent });
+  }
 
   if (isLoadingLeases) return <Loading />
 
@@ -70,7 +92,7 @@ export default function TenantsList() {
       )}
 
       {leasesData?.results.map((lease: any) => {
-        const pendingRent = lease.rent_records.filter((r: any) => r.status === 'PENDING')
+        const pendingRent = (lease.rent_records || []).filter((r: any) => r.status === 'PENDING')
         const isExpanded = expandedLease === lease.id
 
         return (
@@ -81,7 +103,7 @@ export default function TenantsList() {
             >
               <div>
                 <div className="flex items-center gap-4">
-                  <h3 className="font-bold text-lg text-gray-900">{lease.tenant_name}</h3>
+                  <h3 className="font-bold text-lg text-gray-900">{lease.tenant_name || lease.tenant_email}</h3>
                   <a href={`/leases/${lease.id}`} className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded hover:bg-emerald-200 transition" onClick={(e) => e.stopPropagation()}>
                     Manage Lease / Sign
                   </a>
@@ -90,7 +112,7 @@ export default function TenantsList() {
                 <p className="text-xs text-gray-500 mt-1">Lease ends: {new Date(lease.end_date).toLocaleDateString()}</p>
               </div>
               <div className="text-right">
-                <p className="font-bold text-emerald-700">K {Number(lease.monthly_rent).toLocaleString()}/mo</p>
+                <p className="font-bold text-emerald-700">K {Number(lease.monthly_rent || 0).toLocaleString()}/mo</p>
                 <span className={`inline-block mt-1 px-2 py-1 rounded text-xs font-bold ${
                   pendingRent.length > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                 }`}>
@@ -103,7 +125,7 @@ export default function TenantsList() {
               <div className="border-t bg-gray-50 p-4">
                 <h4 className="font-semibold text-sm text-gray-700 mb-3">Rent Schedule</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {lease.rent_records.map((record: any) => (
+                  {(lease.rent_records || []).map((record: any) => (
                     <div key={record.id} className={`p-3 rounded border ${record.status === 'PAID' ? 'bg-green-50 border-green-200' : 'bg-white'}`}>
                       <p className="text-xs text-gray-500 font-medium">{new Date(record.due_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</p>
                       <p className="font-bold text-sm mt-1">K {Number(record.amount).toLocaleString()}</p>
@@ -134,30 +156,34 @@ export default function TenantsList() {
                 <select 
                   className="w-full border rounded px-3 py-2 bg-white" 
                   value={formData.property} 
-                  onChange={e => setFormData({...formData, property: e.target.value, tenant_email: ''})}
+                  onChange={e => handlePropertyChange(e.target.value)}
                 >
                   <option value="">Select a property...</option>
                   {availableProperties.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.title} - K{p.price}/mo</option>
+                    <option key={p.id} value={p.id}>
+                      {getPropName(p)} - K{Number(getPropPrice(p)).toLocaleString()}/mo
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Tenant (Interested Viewers)</label>
-                <select 
+                <label className="block text-xs font-medium text-gray-700 mb-1">Tenant Email</label>
+                <input 
+                  type="email"
+                  list="tenant-options"
+                  placeholder="Type email or select from viewers..."
                   className="w-full border rounded px-3 py-2 bg-white"
                   value={formData.tenant_email} 
                   onChange={e => setFormData({...formData, tenant_email: e.target.value})}
-                  disabled={!formData.property}
-                >
-                  <option value="">Select a tenant...</option>
+                />
+                <datalist id="tenant-options">
                   {uniqueTenants.map((t: any) => (
                     <option key={t.email} value={t.email}>{t.name} ({t.email})</option>
                   ))}
-                </select>
+                </datalist>
                 {formData.property && uniqueTenants.length === 0 && (
-                  <p className="text-xs text-orange-500 mt-1">No viewing requests for this property yet.</p>
+                  <p className="text-xs text-orange-500 mt-1">No viewing requests found for this property. You can type an email manually.</p>
                 )}
               </div>
 
