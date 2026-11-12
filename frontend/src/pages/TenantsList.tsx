@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { managementApi } from '../api/management'
+import { api } from '../api/client'
 import MomoPaymentModal from '../components/MomoPaymentModal'
 import Loading from '../components/Loading'
 
@@ -11,9 +12,22 @@ export default function TenantsList() {
   const [formData, setFormData] = useState({ tenant_email: '', property: '', start_date: '', end_date: '', monthly_rent: '', deposit: '' })
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  // Fetch Leases
+  const { data: leasesData, isLoading: isLoadingLeases } = useQuery({
     queryKey: ['leases'],
     queryFn: managementApi.listLeases,
+  })
+
+  // Fetch Landlord Properties (filter out occupied ones)
+  const { data: propertiesData } = useQuery({
+    queryKey: ['properties'],
+    queryFn: () => api<{results: any[]}>('/properties/'),
+  })
+
+  // Fetch Viewing Requests to find interested tenants
+  const { data: viewingsData } = useQuery({
+    queryKey: ['viewings'],
+    queryFn: () => api<{results: any[]}>('/viewing-requests/'),
   })
 
   const createMutation = useMutation({
@@ -27,7 +41,18 @@ export default function TenantsList() {
     onError: (err: any) => alert("Error: " + err.message)
   })
 
-  if (isLoading) return <Loading />
+  // Filter properties that are not occupied
+  const availableProperties = propertiesData?.results.filter((p: any) => p.status !== 'OCCUPIED') || []
+  
+  // Filter viewing requests for the selected property to find unique tenants
+  const interestedViewings = viewingsData?.results.filter((v: any) => v.property === formData.property) || []
+  const uniqueTenants = Array.from(new Set(interestedViewings.map((v: any) => v.tenant_email)))
+    .map(email => {
+       const v = interestedViewings.find((v: any) => v.tenant_email === email);
+       return { email, name: v?.tenant_name || email };
+    });
+
+  if (isLoadingLeases) return <Loading />
 
   return (
     <div className="space-y-4">
@@ -38,13 +63,13 @@ export default function TenantsList() {
         </button>
       </div>
 
-      {data?.results.length === 0 && (
+      {leasesData?.results.length === 0 && (
         <div className="text-center py-12 bg-white rounded border">
           <p className="text-gray-500">You don't have any active tenants yet.</p>
         </div>
       )}
 
-      {data?.results.map((lease: any) => {
+      {leasesData?.results.map((lease: any) => {
         const pendingRent = lease.rent_records.filter((r: any) => r.status === 'PENDING')
         const isExpanded = expandedLease === lease.id
 
@@ -103,18 +128,65 @@ export default function TenantsList() {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <h2 className="text-xl font-bold mb-4">Issue New Lease</h2>
             <div className="space-y-3">
-              <input placeholder="Tenant Email" className="w-full border rounded px-3 py-2" value={formData.tenant_email} onChange={e => setFormData({...formData, tenant_email: e.target.value})} />
-              <input placeholder="Property ID (UUID)" className="w-full border rounded px-3 py-2" value={formData.property} onChange={e => setFormData({...formData, property: e.target.value})} />
-              <div className="flex gap-2">
-                <input type="date" className="w-full border rounded px-3 py-2" value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target.value})} />
-                <input type="date" className="w-full border rounded px-3 py-2" value={formData.end_date} onChange={e => setFormData({...formData, end_date: e.target.value})} />
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Property</label>
+                <select 
+                  className="w-full border rounded px-3 py-2 bg-white" 
+                  value={formData.property} 
+                  onChange={e => setFormData({...formData, property: e.target.value, tenant_email: ''})}
+                >
+                  <option value="">Select a property...</option>
+                  {availableProperties.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.title} - K{p.price}/mo</option>
+                  ))}
+                </select>
               </div>
-              <input placeholder="Monthly Rent" type="number" className="w-full border rounded px-3 py-2" value={formData.monthly_rent} onChange={e => setFormData({...formData, monthly_rent: e.target.value})} />
-              <input placeholder="Deposit" type="number" className="w-full border rounded px-3 py-2" value={formData.deposit} onChange={e => setFormData({...formData, deposit: e.target.value})} />
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Tenant (Interested Viewers)</label>
+                <select 
+                  className="w-full border rounded px-3 py-2 bg-white"
+                  value={formData.tenant_email} 
+                  onChange={e => setFormData({...formData, tenant_email: e.target.value})}
+                  disabled={!formData.property}
+                >
+                  <option value="">Select a tenant...</option>
+                  {uniqueTenants.map((t: any) => (
+                    <option key={t.email} value={t.email}>{t.name} ({t.email})</option>
+                  ))}
+                </select>
+                {formData.property && uniqueTenants.length === 0 && (
+                  <p className="text-xs text-orange-500 mt-1">No viewing requests for this property yet.</p>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                  <input type="date" className="w-full border rounded px-3 py-2" value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target.value})} />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+                  <input type="date" className="w-full border rounded px-3 py-2" value={formData.end_date} onChange={e => setFormData({...formData, end_date: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Monthly Rent</label>
+                  <input placeholder="ZMW" type="number" className="w-full border rounded px-3 py-2" value={formData.monthly_rent} onChange={e => setFormData({...formData, monthly_rent: e.target.value})} />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Deposit</label>
+                  <input placeholder="ZMW" type="number" className="w-full border rounded px-3 py-2" value={formData.deposit} onChange={e => setFormData({...formData, deposit: e.target.value})} />
+                </div>
+              </div>
+
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={() => setShowCreateModal(false)} className="flex-1 bg-gray-100 py-2 rounded">Cancel</button>
-              <button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="flex-1 bg-emerald-600 text-white py-2 rounded font-medium">
+              <button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !formData.property || !formData.tenant_email} className="flex-1 bg-emerald-600 text-white py-2 rounded font-medium disabled:opacity-50">
                 {createMutation.isPending ? 'Creating...' : 'Issue Lease'}
               </button>
             </div>
