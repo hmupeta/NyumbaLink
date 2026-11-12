@@ -24,7 +24,7 @@ export default function TenantsList() {
     queryFn: () => api<any>('/properties/'),
   })
 
-  // Fetch Viewing Requests (Corrected endpoint: /viewings/)
+  // Fetch Viewing Requests
   const { data: viewingsData } = useQuery({
     queryKey: ['viewings'],
     queryFn: () => api<any>('/viewings/'),
@@ -50,20 +50,36 @@ export default function TenantsList() {
     return status !== 'OCCUPIED';
   })
 
-  // Robust field fallbacks for properties
-  const getPropName = (p: any) => p.title || p.name || p.address || p.property_name || 'Unnamed Property'
-  const getPropPrice = (p: any) => p.price || p.rent || p.rent_amount || p.monthly_rent || 0
+  // --- ROBUST FIELD EXTRACTION ---
+  
+  // Properties
+  const getPropName = (p: any) => p.property_name || p.title || p.name || 'Unnamed Property'
+  const getPropLoc = (p: any) => p.location || p.address || p.city || p.town || ''
+  const getPropPrice = (p: any) => p.price || p.rent_amount || p.rent || p.monthly_rent || 0
 
-  // Robust field fallbacks for viewing requests
-  const getViewingPropertyId = (v: any) => v.property || v.property_id || v.listing || v.listing_id
-  const getViewingEmail = (v: any) => v.tenant_email || v.seeker_email || v.seeker?.email || v.tenant?.email || v.user_email || ''
-  const getViewingName = (v: any) => v.tenant_name || v.seeker_name || v.seeker?.name || v.tenant?.name || 'Seeker'
+  // Viewings - handle nested serializers (e.g., v.seeker.email)
+  const getViewingPropertyId = (v: any) => {
+    if (typeof v.property === 'object' && v.property !== null) return v.property.id;
+    return v.property || v.property_id || v.listing_id || v.listing;
+  }
+  
+  const getViewingEmail = (v: any) => {
+    return v.tenant_email || v.seeker_email || v.email || 
+           v.seeker?.email || v.tenant?.email || v.user?.email || '';
+  }
+  
+  const getViewingName = (v: any) => {
+    return v.tenant_name || v.seeker_name || 
+           v.seeker?.full_name || v.seeker?.first_name || 
+           v.tenant?.full_name || v.user?.full_name || 'Seeker';
+  }
 
   // Filter viewing requests for the selected property
   const interestedViewings = viewingsList.filter((v: any) => 
     String(getViewingPropertyId(v)) === String(formData.property)
   )
   
+  // Extract unique tenants from the viewings
   const uniqueTenants = Array.from(new Set(interestedViewings.map(getViewingEmail)))
     .filter(Boolean)
     .map(email => {
@@ -163,11 +179,15 @@ export default function TenantsList() {
                   onChange={e => handlePropertyChange(e.target.value)}
                 >
                   <option value="">Select a property...</option>
-                  {availableProperties.map((p: any) => (
-                    <option key={p.id} value={p.id}>
-                      {getPropName(p)} - K{Number(getPropPrice(p)).toLocaleString()}/mo
-                    </option>
-                  ))}
+                  {availableProperties.map((p: any) => {
+                    const loc = getPropLoc(p);
+                    const name = getPropName(p);
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {name} {loc ? `(${loc})` : ''} - K{Number(getPropPrice(p)).toLocaleString()}/mo
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
