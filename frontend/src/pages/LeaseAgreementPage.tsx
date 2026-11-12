@@ -35,7 +35,6 @@ export default function LeaseAgreementPage() {
   const isLandlord = userEmail === 'landlord@nyumbalink.com' || userEmail === lease.landlord_email?.toLowerCase() || String(user?.id) === String(lease.landlord);
   const isTenant = userEmail === 'seeker@nyumbalink.com' || userEmail === lease.tenant_email?.toLowerCase();
   
-  const userSigned = isLandlord ? lease.landlord_signed : lease.tenant_signed;
   const bothSigned = lease.landlord_signed && lease.tenant_signed;
 
   return (
