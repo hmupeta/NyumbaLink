@@ -41,7 +41,7 @@ class _MomoPaymentModalState extends State<MomoPaymentModal> {
   void _startPolling() {
     _pollTimer = Timer.periodic(Duration(seconds: 5), (timer) async {
       try {
-        final res = await ApiClient().get('/payments/status/$_reference/');
+        final res = await ApiClient.checkStatus('/payments/status/$_reference/');
         final status = res['status'];
         if (status == 'SUCCESS') {
           timer.cancel();
