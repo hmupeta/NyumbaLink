@@ -108,7 +108,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           return Padding(
-  padding: EdgeInsets.all(16),
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -219,7 +218,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   ),
                 
                 Padding(
-  padding: EdgeInsets.all(16),
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,7 +469,6 @@ class _PaymentModalState extends State<_PaymentModal> {
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           return Padding(
-  padding: EdgeInsets.all(16),
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -521,7 +518,6 @@ class _PaymentModalState extends State<_PaymentModal> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-  padding: EdgeInsets.all(16),
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -603,7 +599,6 @@ class _RentPaymentModalState extends State<_RentPaymentModal> {
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           return Padding(
-  padding: EdgeInsets.all(16),
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -653,7 +648,6 @@ class _RentPaymentModalState extends State<_RentPaymentModal> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-  padding: EdgeInsets.all(16),
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,

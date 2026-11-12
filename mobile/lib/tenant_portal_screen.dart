@@ -11,16 +11,9 @@ class TenantPortalScreen extends StatefulWidget {
 
 class _TenantPortalScreenState extends State<TenantPortalScreen> {
   Future<void> _loadViewings() async {
-    // Fetch viewings from API
-    try {
-      setState(() => _isLoadingViewings = true);
-      // TODO: call ApiClient.getViewingRequests()
-    } catch (e) {
-      print(e);
-    } finally {
-      setState(() => _isLoadingViewings = false);
-    }
+    // TODO: Fetch viewings from API
   }
+
 
 
   late Future<List<dynamic>> _leasesFuture;
