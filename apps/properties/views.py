@@ -48,7 +48,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
             qs = qs.filter(Q(status="ACTIVE") | Q(submitted_by=self.request.user))
         else:
             qs = qs.filter(status="ACTIVE")
-        return qs.exclude(property__occupancy_status='OCCUPIED').exclude(property__status='OCCUPIED')
+        return qs.exclude(property__status='OCCUPIED')
 
     def perform_create(self, serializer):
         serializer.save(submitted_by=self.request.user)
@@ -72,7 +72,7 @@ class ListingFilter(filters.FilterSet):
 
     def filter_features(self, qs, name, value):
         slugs = [s for s in value.split(",") if s]
-        return qs.exclude(property__occupancy_status='OCCUPIED').exclude(property__status='OCCUPIED').filter(property__features__slug__in=slugs).distinct()
+        return qs.exclude(property__status='OCCUPIED').filter(property__features__slug__in=slugs).distinct()
 
 
 class ListingViewSet(viewsets.ModelViewSet):
@@ -92,11 +92,11 @@ class ListingViewSet(viewsets.ModelViewSet):
         
         # Staff see everything (for moderation)
         if user.is_authenticated and user.is_staff:
-            return qs.exclude(property__occupancy_status='OCCUPIED').exclude(property__status='OCCUPIED')
+            return qs.exclude(property__status='OCCUPIED')
             
         # The my_listings action handles its own filtering
         if self.action == "my_listings":
-            return qs.exclude(property__occupancy_status='OCCUPIED').exclude(property__status='OCCUPIED')
+            return qs.exclude(property__status='OCCUPIED')
 
         # PUBLIC LIST VIEW (Homepage): ALWAYS only return PUBLISHED
         if self.action == "list":
@@ -105,7 +105,7 @@ class ListingViewSet(viewsets.ModelViewSet):
         # DETAIL ACTIONS (Update, Delete, Submit, Publish):
         # Allow if it's published OR if the user owns it
         if user.is_authenticated:
-            return qs.exclude(property__occupancy_status='OCCUPIED').exclude(property__status='OCCUPIED').filter(
+            return qs.exclude(property__status='OCCUPIED').filter(
                 Q(status=ListingStatus.PUBLISHED)
                 | Q(created_by=user)
                 | Q(property__submitted_by=user)
@@ -289,8 +289,8 @@ class ReportViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = Report.objects.select_related("reporter", "target_listing", "target_user")
         if user_is_moderator(self.request.user):
-            return qs.exclude(property__occupancy_status='OCCUPIED').exclude(property__status='OCCUPIED')
-        return qs.exclude(property__occupancy_status='OCCUPIED').exclude(property__status='OCCUPIED').filter(reporter=self.request.user)
+            return qs.exclude(property__status='OCCUPIED')
+        return qs.exclude(property__status='OCCUPIED').filter(reporter=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(reporter=self.request.user)
