@@ -15,8 +15,11 @@ export default function MaintenanceList() {
   })
 
   // Assuming we have properties and leases for the dropdowns
-  const { data: properties } = useQuery<any>({ queryKey: ['properties-list'], queryFn: () => api('/properties/') })
-  const { data: leases } = useQuery<any>({ queryKey: ['leases-list'], queryFn: () => api('/leases/') })
+  const { data: propertiesData } = useQuery<any>({ queryKey: ['properties-list'], queryFn: () => api('/properties/') })
+  const { data: leasesData } = useQuery<any>({ queryKey: ['leases-list'], queryFn: () => api('/leases/') })
+  
+  const properties = propertiesData?.results || propertiesData || []
+  const leases = leasesData?.results || leasesData || []
 
   const createMutation = useMutation({
     mutationFn: () => maintenanceApi.create({ 
@@ -100,11 +103,11 @@ export default function MaintenanceList() {
               </select>
               <select required value={formData.property} onChange={e => setFormData({...formData, property: e.target.value})} className="w-full border rounded px-3 py-2 text-sm">
                 <option value="">Select Property...</option>
-                {properties?.results.map((p: any) => <option key={p.id} value={p.id}>{p.neighbourhood_name} ({p.property_type})</option>)}
+                {properties.map((p: any) => <option key={p.id} value={p.id}>{p.neighbourhood_name} ({p.property_type})</option>)}
               </select>
               <select value={formData.lease} onChange={e => setFormData({...formData, lease: e.target.value})} className="w-full border rounded px-3 py-2 text-sm">
                 <option value="">No Specific Tenant</option>
-                {leases?.results.map((l: any) => <option key={l.id} value={l.id}>{l.tenant_name}</option>)}
+                {leases.map((l: any) => <option key={l.id} value={l.id}>{l.tenant_name}</option>)}
               </select>
               
               <button type="submit" disabled={createMutation.isPending} className="w-full bg-emerald-600 text-white py-2 rounded hover:bg-emerald-700 disabled:opacity-50 mt-2 font-medium">
