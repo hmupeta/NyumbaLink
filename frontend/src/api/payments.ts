@@ -18,4 +18,6 @@ export const paymentsApi = {
       method: 'POST',
       body: JSON.stringify({ listing_id: listingId })
     })
+  checkStatus: (reference: string) =>
+    api<{ status: string }>(`/payments/status/${reference}/`),
 }

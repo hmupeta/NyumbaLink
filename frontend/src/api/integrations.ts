@@ -10,6 +10,11 @@ export const integrationsApi = {
       body: JSON.stringify({ refresh_url: refreshUrl, return_url: returnUrl })
     }),
   initiatePayment: (data: any) => api<any>('/payment-settings/initiate_payment/', {
+  checkStatus: async (reference: string) => {
+    // TODO: replace with real backend endpoint if needed
+    const res = await fetch(`/api/v1/payments/status/${reference}/`);
+    return res.json();
+  },
     method: 'POST',
     body: JSON.stringify(data)
   })
